@@ -1,9 +1,9 @@
 import { useState, useEffect, useMemo, useRef, useLayoutEffect } from 'react';
 import { format, parseISO, addDays, startOfToday } from 'date-fns';
 import { fr } from 'date-fns/locale';
-import { ArrowRight, Zap, Filter, X, ChevronLeft, ChevronRight, Plus, MapPin, Calendar, Clock, Users, CheckCircle2, UserPlus, Share2, Check } from 'lucide-react';
+import { ArrowRight, Zap, Filter, X, ChevronLeft, ChevronRight, Plus, MapPin, Calendar, Users, CheckCircle2, UserPlus, Share2, Check } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { MapContainer, TileLayer, Marker, useMap } from 'react-leaflet';
+import { MapContainer, TileLayer, Marker } from 'react-leaflet';
 import L from 'leaflet';
 import gsap from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
@@ -55,16 +55,6 @@ const bordeauxCoordinates: Record<string, [number, number]> = {
 };
 
 // --- HELPER COMPONENTS ---
-function MapBounds({ slots }: { slots: Slot[] }) {
-    const map = useMap();
-    useEffect(() => {
-        if (slots.length > 0) {
-            const bounds = L.latLngBounds(slots.map(s => [s.lat, s.lng]));
-            map.fitBounds(bounds, { padding: [50, 50], animate: true });
-        }
-    }, [slots, map]);
-    return null;
-}
 
 function InteractiveCalendarCard() {
     const [selectedDate, setSelectedDate] = useState<number | null>(null);
@@ -769,8 +759,6 @@ export default function VariantB() {
     const [isSticky, setIsSticky] = useState(false);
 
     // Filters
-    const [selectedClubs, setSelectedClubs] = useState<string[]>([]);
-    const [isFavoriteOnly, setIsFavoriteOnly] = useState(false);
     const [durationFilter, setDurationFilter] = useState<string>('all');
 
     // Hero Search State
@@ -795,10 +783,10 @@ export default function VariantB() {
         { dayIndex: 1, hour: 19, minute: 0 }
     ]);
 
-    const favorites = ['Big Padel', '4PADEL', 'MB Padel', 'Ginga Stadium', 'Padel House', 'UCPA'];
+
 
     // --- COMPUTED ---
-    const filteredSlots = useMemo(() => {
+    const allFilteredSlots = useMemo(() => {
         return slots.filter((slot) => {
             const d = parseISO(slot.startTime);
             const slotTotalMins = d.getHours() * 60 + d.getMinutes();
@@ -808,16 +796,17 @@ export default function VariantB() {
 
             const selTotalMins = sel.hour * 60 + sel.minute;
             const isTimeMatch = (slotTotalMins >= selTotalMins - 15 && slotTotalMins <= selTotalMins + 480);
-            const isClubMatch = selectedClubs.length === 0 || selectedClubs.includes(slot.centerName);
-            const isFavoriteMatch = !isFavoriteOnly || favorites.some(fav => slot.centerName.includes(fav));
+
+            // In the real app, we'd hook up actual state for these, but they are hardcoded for now 
+            // to avoid lint errors since they were removed, or just not evaluate them if not used.
             const isDurationMatch = durationFilter === 'all' || slot.durationMinutes === parseInt(durationFilter);
 
-            return isTimeMatch && isClubMatch && isFavoriteMatch && isDurationMatch;
+            return isTimeMatch && isDurationMatch;
         });
-    }, [slots, selections, selectedClubs, isFavoriteOnly, durationFilter]);
+    }, [slots, selections, durationFilter]);
 
-    const visibleSlots = useMemo(() => {
-        return filteredSlots.filter(slot => {
+    const filteredSlots = useMemo(() => {
+        return allFilteredSlots.filter(slot => {
             const d = parseISO(slot.startTime);
             const dayKey = format(d, 'yyyy-MM-dd');
             const sel = selections.find(s => ALL_DAYS[s.dayIndex].key === dayKey);
@@ -827,11 +816,11 @@ export default function VariantB() {
             const selStartMins = sel.hour * 60 + sel.minute;
             return slotTotalMins >= selStartMins && slotTotalMins < selStartMins + 1 * 60; // 1h window
         });
-    }, [filteredSlots, selections]);
+    }, [allFilteredSlots, selections]);
 
     const dailyGroups = useMemo(() => {
         const daysGroup: Record<string, any[]> = {};
-        filteredSlots.forEach(slot => {
+        allFilteredSlots.forEach(slot => {
             const dayKey = format(parseISO(slot.startTime), 'yyyy-MM-dd');
             if (!daysGroup[dayKey]) daysGroup[dayKey] = [];
 
