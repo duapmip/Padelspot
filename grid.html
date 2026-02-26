@@ -1,0 +1,644 @@
+
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+
+<head id="Head1"><title>
+	Se connecter
+</title><meta name="distribution" content="Global" /><meta name="category" content="Reservas y Servicios" /><meta name="language" content="fr-FR" /><meta name="author" content="TPC-SOFT" /><meta http-equiv="Content-Type" content="text/html; charset=utf-8" /><meta name="resource-type" content="document" /><meta name="robots" content="all" /><meta name="revisit-after" content="10" /><meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=3" />
+  
+    
+    <script src="https://code.jquery.com/jquery-1.7.2.min.js" type="text/javascript"></script>
+    
+    <link rel="preconnect" href="https://fonts.googleapis.com" /><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="" /><link href="https://fonts.googleapis.com/css2?family=Barlow:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,100;1,200;1,300;1,400;1,500;1,600;1,700;1,800;1,900&amp;display=swap" rel="stylesheet" /><link id="rf6" href="Squashbad33/img/favicon.ico" rel="shortcut icon" type="image/x-icon" /><link id="rf1" href="Squashbad33/css/global.css" rel="stylesheet" type="text/css" /><link id="Link2" href="/css/userPreferences.css" rel="stylesheet" type="text/css" /><link id="rf16" rel="stylesheet" type="text/css" href="Scripts/fancybox/jquery.fancybox.css" media="screen" />
+
+
+    <script type="text/javascript">
+        $(window).load(function () {
+            $('#slider').nivoSlider();
+        });
+    </script>
+    
+    <script type="text/javascript">
+        $(function() {
+        $(window).on("scroll", function() {
+            if($(window).scrollTop() > 50) {
+                $(".header_top2").addClass("header_top_fixed");
+            } else {
+                //remove the background property so it comes transparent again (defined in your css)
+                $(".header_top2").removeClass("header_top_fixed");
+            }
+        });
+        });
+    </script>
+    <script>
+        var SCROLL_ACTUAL = 0;
+        $(window).ready(function(){
+	        $(window).scroll(function (event) {
+		        var scroll = $(window).scrollTop();
+		        var parallax_position_y = $(".background-parallax").css("background-position-y");
+		        parallax_position_y = parseInt(parallax_position_y.replace("%", ""));
+
+		        if(scroll > SCROLL_ACTUAL && parallax_position_y < 100){
+			        parallax_position_y += 2;
+			        $(".background-parallax").css("background-position-y", parallax_position_y + "%");
+		        }
+		        if(scroll < SCROLL_ACTUAL && parallax_position_y > 0){
+			        parallax_position_y -= 2;
+			        $(".background-parallax").css("background-position-y", parallax_position_y + "%");
+		        }
+		        SCROLL_ACTUAL = scroll;
+	        });
+        });
+    </script>
+    </head>
+
+<body class="background-parallax">
+<form method="post" action="./Login.aspx?return_url=%2fBooking%2fGrid.aspx" onsubmit="javascript:return WebForm_OnSubmit();" onkeypress="javascript:return WebForm_FireDefaultButton(event, 'ContentPlaceHolderContenido_Login1_LoginButton')" id="form1">
+<div class="aspNetHidden">
+<input type="hidden" name="__EVENTTARGET" id="__EVENTTARGET" value="" />
+<input type="hidden" name="__EVENTARGUMENT" id="__EVENTARGUMENT" value="" />
+<input type="hidden" name="__VIEWSTATE" id="__VIEWSTATE" value="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" />
+</div>
+
+<script type="text/javascript">
+//<![CDATA[
+var theForm = document.forms['form1'];
+if (!theForm) {
+    theForm = document.form1;
+}
+function __doPostBack(eventTarget, eventArgument) {
+    if (!theForm.onsubmit || (theForm.onsubmit() != false)) {
+        theForm.__EVENTTARGET.value = eventTarget;
+        theForm.__EVENTARGUMENT.value = eventArgument;
+        theForm.submit();
+    }
+}
+//]]>
+</script>
+
+
+<script src="/WebResource.axd?d=pynGkmcFUV13He1Qd6_TZJthEpX13UiiISReTgTdglNsb2b467N8peXVFMOlORc3Kscp0rIsAuut6K-r9bJ9Vw2&amp;t=638465094520000000" type="text/javascript"></script>
+
+
+<script src="/ScriptResource.axd?d=1HpV3OVB0CaEXoaafcqmhqiGL5uHjzOVeWJbWFdjMyLRYcchhK61urogT7qK4VIjTSB2kpxBGzPojYKM1vnP30OI908Pko5VD778OxMhnbeBBAAxUWT-Vd-FGZ_inP6P4rR-RZYh2pACZoTrAOwjLA2&amp;t=495f15ed" type="text/javascript"></script>
+<script type="text/javascript">
+//<![CDATA[
+var __cultureInfo = {"name":"es-ES","numberFormat":{"CurrencyDecimalDigits":2,"CurrencyDecimalSeparator":",","IsReadOnly":true,"CurrencyGroupSizes":[3],"NumberGroupSizes":[3],"PercentGroupSizes":[3],"CurrencyGroupSeparator":".","CurrencySymbol":"€","NaNSymbol":"NaN","CurrencyNegativePattern":8,"NumberNegativePattern":1,"PercentPositivePattern":0,"PercentNegativePattern":0,"NegativeInfinitySymbol":"-∞","NegativeSign":"-","NumberDecimalDigits":2,"NumberDecimalSeparator":",","NumberGroupSeparator":".","CurrencyPositivePattern":3,"PositiveInfinitySymbol":"∞","PositiveSign":"+","PercentDecimalDigits":2,"PercentDecimalSeparator":",","PercentGroupSeparator":".","PercentSymbol":"%","PerMilleSymbol":"‰","NativeDigits":["0","1","2","3","4","5","6","7","8","9"],"DigitSubstitution":1},"dateTimeFormat":{"AMDesignator":"","Calendar":{"MinSupportedDateTime":"\/Date(-62135596800000)\/","MaxSupportedDateTime":"\/Date(253402297199999)\/","AlgorithmType":1,"CalendarType":1,"Eras":[1],"TwoDigitYearMax":2029,"IsReadOnly":true},"DateSeparator":"/","FirstDayOfWeek":1,"CalendarWeekRule":2,"FullDateTimePattern":"dddd, d\u0027 de \u0027MMMM\u0027 de \u0027yyyy H:mm:ss","LongDatePattern":"dddd, d\u0027 de \u0027MMMM\u0027 de \u0027yyyy","LongTimePattern":"H:mm:ss","MonthDayPattern":"d \u0027de\u0027 MMMM","PMDesignator":"","RFC1123Pattern":"ddd, dd MMM yyyy HH\u0027:\u0027mm\u0027:\u0027ss \u0027GMT\u0027","ShortDatePattern":"dd/MM/yyyy","ShortTimePattern":"H:mm","SortableDateTimePattern":"yyyy\u0027-\u0027MM\u0027-\u0027dd\u0027T\u0027HH\u0027:\u0027mm\u0027:\u0027ss","TimeSeparator":":","UniversalSortableDateTimePattern":"yyyy\u0027-\u0027MM\u0027-\u0027dd HH\u0027:\u0027mm\u0027:\u0027ss\u0027Z\u0027","YearMonthPattern":"MMMM\u0027 de \u0027yyyy","AbbreviatedDayNames":["do.","lu.","ma.","mi.","ju.","vi.","sá."],"ShortestDayNames":["D","L","M","X","J","V","S"],"DayNames":["domingo","lunes","martes","miércoles","jueves","viernes","sábado"],"AbbreviatedMonthNames":["ene.","feb.","mar.","abr.","may.","jun.","jul.","ago.","sep.","oct.","nov.","dic.",""],"MonthNames":["enero","febrero","marzo","abril","mayo","junio","julio","agosto","septiembre","octubre","noviembre","diciembre",""],"IsReadOnly":true,"NativeCalendarName":"calendario gregoriano","AbbreviatedMonthGenitiveNames":["ene.","feb.","mar.","abr.","may.","jun.","jul.","ago.","sep.","oct.","nov.","dic.",""],"MonthGenitiveNames":["enero","febrero","marzo","abril","mayo","junio","julio","agosto","septiembre","octubre","noviembre","diciembre",""]},"eras":[1,"d. C.",null,0]};//]]>
+</script>
+
+<script src="/ScriptResource.axd?d=uHIkleVeDJf4xS50Krz-yMJD9Tdy5JhzCvGgQblKpWM9TWnIwOA49xThmmb_s-tJ3meEKXm7_U0FidKKanl_OT92blpL2j9pm9ZWdzW-4yKoa2wRKRX6mNvmQoU-XzId2gu1R2m9KtfEazW9rBrYCLGm_PtBJ7su2jhK7gjkEAI1&amp;t=2e7d0aca" type="text/javascript"></script>
+<script src="/ScriptResource.axd?d=Jw6tUGWnA15YEa3ai3FadOdzDMsok4dg7HB8ahSyVDQi1hHQe-4pk7mVypmaS8orVct4VyHYNuo7-PKFPRCy-tQPAlEjj8UR-gG-znxujBJIc5jKbmReKkGyuM3af3fO6S6zFnkLjrwhAQ6BzNdU7LX922rB23hcu0bHsvRJZ2s1&amp;t=2e7d0aca" type="text/javascript"></script>
+<script src="Scripts/SliderSinTextos/jquery.nivo.slider.js" type="text/javascript"></script>
+<script src="Scripts/jquery.fancybox.js?v=2.1.5" type="text/javascript"></script>
+<script src="Scripts/SliderConTextos/jquery.easing.1.3.js" type="text/javascript"></script>
+<script src="Scripts/SliderConTextos/jquery.animate-enhanced.min.js" type="text/javascript"></script>
+<script src="Scripts/SliderConTextos/jquery.superslides.js" type="text/javascript"></script>
+<script src="Scripts/CookiesUserPreferences/CookiesUserPreferences.js" type="text/javascript"></script>
+<script src="Scripts/Menu/menu.js" type="text/javascript"></script>
+<script src="Scripts/fancybox/jquery.fancybox.pack.js" type="text/javascript"></script>
+<script src="Scripts/jquery.flexisel.js" type="text/javascript"></script>
+<script type="text/javascript">
+//<![CDATA[
+function WebForm_OnSubmit() {
+if (typeof(ValidatorOnSubmit) == "function" && ValidatorOnSubmit() == false) return false;
+return true;
+}
+//]]>
+</script>
+
+<div class="aspNetHidden">
+
+	<input type="hidden" name="__VIEWSTATEGENERATOR" id="__VIEWSTATEGENERATOR" value="C2EE9ABB" />
+	<input type="hidden" name="__EVENTVALIDATION" id="__EVENTVALIDATION" value="bU/0kbZpenKvFnhuRH7uFsU6+3jBMviPRZ3RYUIKpnrK/BeYv+J7IzLJlw6LeDbGzhDT9Glsnp2x8hHG2q8TDDL2XxWQB4E9kCrDVALMw5J9PS/BYIJJnnaBbf2fn87IPn92Ewb+j1WtQrh3SpL9s4pRixCFtMjbvvEgJqe2IIzXX5x5+Q99VmMMHUjVPuNrNEWlOYPgAAmIXl5q59lAfDkNDldSXDNT7CzvK3sa8xmLFvWHM9Hk5JAEgHaoqT/o/ii6HJl6BMv+4exHGYAwCMxW8BsgIttiwVIiElDUax5ILBkAal5iYxP32tP/dGsjYhEvLADcpRo91X1DLq14XQ==" />
+</div>
+    
+    <script type="text/javascript">
+//<![CDATA[
+Sys.WebForms.PageRequestManager._initialize('ctl00$ScriptManager1', 'form1', [], ['ctl00$ScriptManager1','ScriptManager1'], [], 100000, 'ctl00');
+//]]>
+</script>
+<input type="hidden" name="ctl00$ScriptManager1" id="ScriptManager1" />
+<script type="text/javascript">
+//<![CDATA[
+Sys.Application.setServerId("ScriptManager1", "ctl00$ScriptManager1");
+Sys.Application._enableHistoryInScriptManager();
+//]]>
+</script>
+
+
+    <div class="containerIdioma" style="display:none">  
+                              <div class="dropdown">
+                                <span class="selLabel">
+                                <img id="Image1" title="LANGUAGE" src="VivePadel/img/icon-world.svg" alt="LANGUAGE" style="width: 23px;vertical-align: middle;margin-right:5px" />&nbsp;</span>
+                                <input type="hidden" name="cd-dropdown">
+                                <ul class="dropdown-list">
+                                  <li data-value="1">
+                                    <span><a id="HyperLinkIngles" AlternateText="English version" title="English version" href="lang.aspx?iso=en-GB">EN<img id="Image2" title="English" src="Squashbad33/img/reino-unido.png" alt="English" style="width: 20px;vertical-align: middle;margin-right:5px; float: left;margin-top: 10px" /></a></span>
+                                  </li>gten
+                                  <li data-value="2">
+                                    <span><a id="HyperLinkCastellano" AlternateText="Versión en Español" title="Versión en Español" href="lang.aspx?iso=es-ES">ES<img id="Image3" title="Español" src="Squashbad33/img/espanya.png" alt="Español" style="width: 20px;vertical-align: middle;margin-right:5px; float: left;margin-top: 10px" /></a></span>
+                                  </li>
+                                  <li data-value="3">
+                                    <span><a id="HyperLinkCatalan" AlternateText="Versió en català" title="Versió en català" href="lang.aspx?iso=ca-ES">CA<img id="Image4" title="Català" src="Squashbad33/img/catalunya.png" alt="Català" style="width: 20px;vertical-align: middle;margin-right:5px; float: left;margin-top: 10px" /></a></span>
+                                  </li>
+                                  <li data-value="4">
+                                    <span><a id="HyperLinkItaliano" AlternateText="Versione italiana" title="Versione italiana" href="lang.aspx?iso=it-IT">IT<img id="Image5" title="Italiano" src="Squashbad33/img/italia.png" alt="Italiano" style="width: 20px;vertical-align: middle;margin-right:5px; float: left;margin-top: 10px" /></a></span>
+                                  </li>
+                                  <li data-value="5">
+                                    <span><a id="HyperLinkFrances" AlternateText="Version Française" title="Version Française" href="lang.aspx?iso=fr-FR">FR<img id="Image6" title="Français" src="Squashbad33/img/francia.png" alt="Français" style="width: 20px;vertical-align: middle;margin-right:5px; float: left;margin-top: 10px" /></a></span>
+                                  </li>
+                                  <li data-value="6">
+                                    <span><a id="HyperLinkHolandes" AlternateText="Nederland Versie" title="Nederland Versie" href="lang.aspx?iso=nl-NL">NL<img id="Image7" title="Nederlands" src="Squashbad33/img/holland.png" alt="Nederlands" style="width: 20px;vertical-align: middle;margin-right:5px; float: left;margin-top: 10px" /></a></span>
+                                  </li>
+                                  <li data-value="7">
+                                    <span><a id="HyperLinkAleman" AlternateText="Deutschland Version" title="Deutschland Version" href="lang.aspx?iso=de-DE">DE<img id="Image8" title="Deutsche" src="Squashbad33/img/germany.png" alt="Deutsche" style="width: 20px;vertical-align: middle;margin-right:5px; float: left;margin-top: 10px" /></a></span>
+                                  </li>
+                                  <li data-value="8">
+                                    <span><a id="HyperLinkPortugues" AlternateText="Versão em português" title="Versão em português" href="lang.aspx?iso=pt-PT">PT<img id="Image9" title="Português" src="Squashbad33/img/portugal.png" alt="Português" style="width: 20px;vertical-align: middle;margin-right:5px; float: left;margin-top: 10px" /></a></span>
+                                  </li>
+                                  <li data-value="9">
+                                    <span><a id="HyperLinkBrasil" AlternateText="Versão em português (Brasil)" title="Versão em português (Brasil)" href="lang.aspx?iso=pt-BR">PT<img id="Image10" title="Português (Brasil)" src="Squashbad33/img/brasil.png" alt="Português (Brasil)" style="width: 20px;vertical-align: middle;margin-right:5px; float: left;margin-top: 10px" /></a></span>
+                                  </li>
+                                </ul>
+                              </div>
+   </div>
+
+   <header class="header">
+        <div class="header_top2">
+            <div class="wrap_cabecera">
+                    <div class="logo" >
+                        <a href="/index.aspx"><img id="ImageLogo" title="Squashbad 33" src="Squashbad33/img/logo.png" alt="Squashbad 33" style="width:auto; max-width:70px" /></a>
+                    </div>
+
+                    <div class="contenedorUsuarios">
+
+                         <div class="contenedorBanderas">
+                            <a id="HyperLinkRegistro" class="BotonRegistro" href="Signup.aspx">INSCRIVEZ-VOUS</a>
+
+                            
+
+                            
+
+                            <a href="Login.aspx" id="linkUsuario" class="BotonAccesoUsuario" title="ACCÈS UTILISATEUR">
+                                
+                            <span id="LabelAccesoUsuario">ACCÈS UTILISATEUR</span></a>
+
+                         </div>
+
+                    </div>
+                    <div class="contenedorEstiloMenu">
+                        <div class="contenedorEstiloMenuInterior">
+                          
+
+<div class="menuhoriz">
+    <ul class='menuhoriz' style='margin-bottom:0px; padding-bottom:0px'><li data-level='0'><a href='https://squashbad33.fr' target='_blank' rel='external nofollow' ><span>SITE WEB</span></a></li><li data-level='0'><a href='/Booking/Grid.aspx' target='_self' rel='nofollow' ><span>RÉSERVATIONS</span></a></li><li data-level='0'><a href='/Matches/Search.aspx' target='_self' rel='nofollow' ><span>MATCHS OUVERTS</span></a></li><li data-level='0'><a href='/Pages/11-championnats_squashbad_33' target='_self'  ><span>CHAMPIONNATS</span></a></li><li data-level='0'><a href='/ActBooking/WeekGrid.aspx' target='_self' rel='nofollow' ><span>ACTIVITÉS</span></a></li></ul>
+</div>
+
+<script type="text/javascript">
+
+    try {
+
+        $(function () {
+            $('a.imagenswap').hover(function (evt) {
+                var imagenBackground = $(this).data('url-imagen');
+                var span = $(this).find("span");
+                $(this).css({
+                    'background-image': 'url(' + imagenBackground + ')',
+                    'background-position': "center",
+                    'background-repeat': "no-repeat",
+                    'background-size' : 'center'
+                                });
+
+                span.css("opacity", 0);
+            },
+            function (evt) {
+                var span = $(this).find("span");
+                $(this).css({
+                    'background-image': '',
+                    'background-position': '',
+                    'background-repeat': '',
+                    'background-size': ''
+                });
+                span.css("opacity", 1);
+            });
+        });
+
+           
+
+    } catch (ex) { }
+
+    $(document).ready()
+    {
+        $('.contenedorEstiloMenu img').each(function (index) {
+            if ($(this).hasClass("imgMenu")) {
+                $(this).css('height', 43);
+                $(this).css('margin-top', -10);
+                $(this).css('margin-bottom', -10);
+            }
+        });
+        $('.contenedorEstiloMenuMasterPage img').each(function (index) {
+            if ($(this).hasClass("imgMenu")) {
+                $(this).css('height', 43);
+                $(this).css('margin-top', -10);
+                $(this).css('margin-bottom', -10);
+            }
+        });
+    }
+    
+
+
+</script>
+
+                          
+<!-- Estilo para el SubMenu (Mover a hojas despues) -->
+
+<script type="text/javascript">
+    $(function () {
+        var pull = $('#pull');
+        var menu = pull.closest('nav').find('ul');// $('nav ul');
+        var menuHeight = menu.height();
+
+        var pull2 = $('#pullIntranet');
+        var menu2 = pull2.closest('nav').find('ul'); // $('nav ul');
+        var menuHeight2 = menu2.height();
+
+        var pull3 = $('#pullSuperior');
+        var menu3 = pull3.closest('nav').find('ul'); // $('nav ul');
+        var menuHeight3 = menu3.height();  
+
+        $(pull).on('click', function (e) {
+            e.preventDefault();
+            menu.slideToggle();
+        });
+
+        $(pull2).on('click', function (e) {
+            e.preventDefault();
+            menu2.slideToggle();
+        });
+
+        $(pull3).on('click', function (e) {
+            e.preventDefault();
+            menu3.slideToggle();
+        });
+
+        $(window).resize(function () {
+            var w = $(window).width();
+            if (w > 320 && menu.is(':hidden')) {
+                menu.removeAttr('style');
+                menu2.removeAttr('style');
+                menu3.removeAttr('style');
+            }
+        });
+    });
+</script>
+
+<div id="WUCMenuSuperiorResponsive1_PanelGeneral">
+	
+    <a class="toggleMenu" href="#"><span id="WUCMenuSuperiorResponsive1_Label1">MENU PRINCIPAL</span></a>
+    <nav class="clearfix">
+        <ul><li><a href='https://squashbad33.fr' target='_blank'>SITE WEB</a></li><li><a href='/Booking/Grid.aspx' target='_self'>RÉSERVATIONS</a></li><li><a href='/Matches/Search.aspx' target='_self'>MATCHS OUVERTS</a></li><li><a href='/Pages/11-championnats_squashbad_33' target='_self'>CHAMPIONNATS</a></li><li><a href='/ActBooking/WeekGrid.aspx' target='_self'>ACTIVITÉS</a></li></ul>
+        <a href="#" id="pull"><span id="WUCMenuSuperiorResponsive1_LabelTituloMenuGeneral">MENU PRINCIPAL</span></a>
+    </nav>
+
+</div>
+
+
+                        </div>
+                    </div>
+
+                    <div class="clear"></div>
+
+            </div>
+
+        </div>
+
+    </header>
+
+
+    <div class="contenedorGeneralTodo2">
+
+     <div class="main">
+      <div class="wrap">  		
+
+		    <!-- CONTENIDO -->
+
+           <div class="services_gridInterior">
+		      <div class="content_bottom">
+                   
+    <style>
+        .fancybox-inner { 
+            overflow: auto;
+            zoom:1;
+        }
+
+    </style>
+    <link rel="stylesheet" href="scripts/fancybox/jquery.fancybox.css" type="text/css" media="screen" />
+        <script type="text/javascript" src="Scripts/jquery.ui/jquery-ui.min.js"></script>
+        <script type="text/javascript" src="scripts/fancybox/jquery.fancybox.pack.js"></script>    
+        <script type="text/javascript" src="Scripts/jquery.cookie/js.cookie.js?version='1.0.0.0'"></script>
+
+
+ 
+    <div class="divContenedorLogin">
+     <div style="text-align: left; display: flex; flex-wrap: wrap;max-width: 100%; align-items:center;background:White">
+        <div class="contenedor2ColumnasActividades order2">
+            <div class="sliderLogin" style="background-image: url(../images/imagen-index-1.jpg);background-position: center;background-repeat: no-repeat;-webkit-background-size: cover;-moz-background-size: cover;-o-background-size: cover; background-size: cover;"><!-- Slides -->
+                <div style="display: flex;align-items: center; position:absolute;z-index:10;background-color: transparent;justify-content: center; padding-left: 40px;padding-right: 40px;backdrop-filter: blur(9px)">
+                     <div style="display: flex;align-items: flex-start">
+                        <img id="ContentPlaceHolderContenido_Image1" title="Matchpoint" src="images/login-M.png" alt="Matchpoint" style="width:auto; height:auto; margin-right:10px; max-width:55px" />
+                        <div>
+                            <h1 style="font-weight:700!important; font-size:30px; color:White!important">Play and more...</h1>
+                            <p style="color:#ececec!important"><span id="ContentPlaceHolderContenido_LabelTextoLoginBienvenida">Bienvenue dans votre espace personnel</span></p>
+                        </div>
+                     </div>
+                </div>
+                
+                <!-- <video style="height:100%; opacity:0.7; object-fit:cover; width:100%" autoplay muted loop playsinline>
+                  <source src="../images/bokeh1.mp4" type="video/mp4">
+                </video> -->
+                
+                
+            </div>
+        </div>
+
+
+        <div class="contenedor2ColumnasActividades order1" style="margin-top:30px; margin-bottom:30px">
+                <div style="width:100%; text-align:center; margin-bottom:30px">
+                    <img id="ContentPlaceHolderContenido_ImageIconUser" title="Login" src="images.ashx?id=d4f40f4963ad13530111be3098647540&amp;maxwidth=150&amp;maxheight=110" alt="Login" style="width:auto; height:auto;filter: brightness(70%) grayscale(100%);transition: all .3s ease;opacity:0.2; border-radius:5px" />
+                </div>
+
+                <table id="ContentPlaceHolderContenido_Login1" class="login2" cellspacing="0" cellpadding="0" style="border-collapse:collapse;">
+	<tr>
+		<td>
+                        <div class="formulario_fila" style="text-align: center; border-bottom: 0px; margin-bottom:20px; display:none">
+                            <span id="ContentPlaceHolderContenido_Login1_LabelTitleLogin" style="font-size:20px; font-weight:800">IDENTIFIEZ-VOUS -  Padel33/SB33</span>
+                        </div>
+                        <div class="formulario_fila" style="border-bottom: 0px; padding:0px">
+                            <div class="formulario_datos" style="width: 100%; padding-left:5px">
+                                <p style="margin-bottom:5px"><label for="ContentPlaceHolderContenido_Login1_UserName" id="ContentPlaceHolderContenido_Login1_UserNameLabel" style="float:left; margin-right:5px">Email</label> <span id="ContentPlaceHolderContenido_Login1_UserNameRequired" title="Nom d&#39;utilisateur est requis." style="visibility:hidden;">*</span></p>
+                                <input name="ctl00$ContentPlaceHolderContenido$Login1$UserName" type="text" id="ContentPlaceHolderContenido_Login1_UserName" class="TextBoxLogin" style="width:100%!important" />
+                                
+                            </div>
+                        </div>
+                        <div class="formulario_fila" style="border-bottom: 0px; padding:0px">
+                            <div class="formulario_datos" style="width: 100%; padding-left:5px">
+                                <p style="margin-bottom:5px"><label for="ContentPlaceHolderContenido_Login1_Password" id="ContentPlaceHolderContenido_Login1_PasswordLabel" style="float:left; margin-right:5px">Mot de passe:</label> <span id="ContentPlaceHolderContenido_Login1_PasswordRequired" title="Mot de passe requis." style="visibility:hidden;">*</span></p>
+                                <input name="ctl00$ContentPlaceHolderContenido$Login1$Password" type="password" id="ContentPlaceHolderContenido_Login1_Password" class="TextBoxLogin" style="width:100%!important" />
+                                
+                            </div>
+
+                            <div class="formulario_datos" style="width:100%">
+                                <input id="ContentPlaceHolderContenido_Login1_RememberMe" type="checkbox" name="ctl00$ContentPlaceHolderContenido$Login1$RememberMe" /><label for="ContentPlaceHolderContenido_Login1_RememberMe">Se souvenir de moi la prochaine fois</label>
+                            </div>
+                        </div>
+                        <div class="formulario_fila" style="margin-top:10px; padding:0px; text-align:center">
+                            <div style="text-align: center; padding-left:5px; margin-bottom: 5px; display: inline-block; width: 100%;">
+                                <a id="ContentPlaceHolderContenido_Login1_HyperLinkAcceso" class="TextoLink" href="PasswordRecovery.aspx">Mot de passe oublié?</a>
+                            </div>
+                        </div>
+                        <div class="formulario_fila" style="text-align: center; color: red; border-bottom: 0px">
+                            
+                        </div>
+                        <div style="text-align: center; margin-top: 10px; margin-bottom: 5px; display: inline-block; width: 100%;">
+                            <input type="submit" name="ctl00$ContentPlaceHolderContenido$Login1$LoginButton" value="Entrer" onclick="javascript:WebForm_DoPostBackWithOptions(new WebForm_PostBackOptions(&quot;ctl00$ContentPlaceHolderContenido$Login1$LoginButton&quot;, &quot;&quot;, true, &quot;Login2&quot;, &quot;&quot;, false, false))" id="ContentPlaceHolderContenido_Login1_LoginButton" class="boton" />
+                            
+                            <div style="display:block;overflow:hidden;margin-top: 14px">
+                            
+                                
+
+                                
+                                
+                                
+
+                                
+
+                            </div>
+                        </div>
+                
+
+                                </td>
+	</tr>
+</table>
+
+                <div style="text-align:center; width:100%; margin-top:20px">
+                     <span id="ContentPlaceHolderContenido_Label12003" style="font-size:18px; font-weight:700">Vous n'avez pas encore de compte?</span>
+                        <br /><br />
+                     <a id="ContentPlaceHolderContenido_LinkButtonRegistrarse" class="botonRegistro" href="javascript:__doPostBack(&#39;ctl00$ContentPlaceHolderContenido$LinkButtonRegistrarse&#39;,&#39;&#39;)">Inscrivez-vous en quelques secondes</a>
+                </div>
+        </div>
+    </div>
+    </div>
+
+
+
+    
+    <div id="DivBannerLogin" style="width: 100%; display: none; padding-top: 5px; padding-left: 30px; padding-right: 30px; padding-bottom: 15px; min-width: 600px; min-height: 400px">
+        <iframe id="ContentPlaceHolderContenido_iframeBannerLogin" style="height: 380px; width: 620px">
+        </iframe>
+    </div>
+    <script type="text/javascript">
+        function showFancyBannerLogin() {
+            
+            if ($.cookie("bannerVisualizado") == null) {
+                $.cookie("bannerVisualizado", "false");
+            }
+            if ($.cookie("bannerVisualizado") == "false") {
+                $.fancybox.open([{
+                    parent: "form:first", // jQuery selector
+                    beforeShow: function () {
+                        parent.$('#DivBannerLogin').show();
+                        $.cookie("bannerVisualizado", "true");
+                        $("[id$='contenedorEstiloMenu']").css("display", "none");
+                    },
+                    afterClose: function () {
+                        parent.$('#DivBannerLogin').hide();
+                        $.cookie("bannerVisualizado", "true");
+                        $("[id$='contenedorEstiloMenu']").css("display", "table");
+                    },
+                    helpers: {
+                        overlay: {
+                            opacity: 0.8,
+                            css:
+                            { 'background-color': '#ff0000' },
+                            locked: true,
+                            closeClick: false
+                        }
+                    },
+                    minHeight: 100,
+                    href: '#DivBannerLogin',
+                    width: 450,
+                    height: 220,
+                    maxWidth: '98%',
+                    maxHeight: '98%',
+                    afterShow: function () {
+                        try {
+                            parent.$('.fancybox-inner').css('max-height', parent.$('.fancybox-inner').height())
+                        } catch (e) { };
+                        parent.$('.fancybox-inner').height($('html').height());
+                    }
+                }]);
+            }
+        }
+
+
+
+    </script>
+
+              </div>
+
+           </div>
+           <!-- FIN CONTENIDO -->
+           <div class="clear"></div>
+      </div>
+    </div>
+
+    
+
+    <footer class="footer">
+        <div class="wrap_pie">
+            <div class="section group">
+                <div class="col_1_of_4 span_1_of_4">
+                    <h3><span id="Label1">TÉLÉCHARGEZ NOTRE APP</span></h3>
+                    <a href="https://play.google.com/store/apps/details?id=es.tpc.matchpoint.appclient.padel33" id="enlaceAppAndroid" target="_blank"><img src="/images/icon-google-play2.png" style="width:160px" alt="GOOGLE PLAY" title="GOOGLE PLAY" /></a>
+                    <a href="https://apps.apple.com/us/app/padel-33-sb-33/id6737900345" id="enlaceAppIOS" target="_blank"><img src="/images/icon-app-store2.png" style="width:160px" alt="APP STORE" title="APP STORE" /></a>
+                </div>
+
+                <div class="col_1_of_4 span_1_of_4" >
+                    <h3><span><span id="Label10">CONTACT</span></span></h3>
+                    <div id="divInfoPie">
+                        <span style="font-weight:bold">© Padel33/SB33</span><br />. <br/>  <br/>Tel. <br /><a href="mailto:" class="LinkPie" target="_blank"></a>
+                    </div>
+                </div>
+                
+                <div id="Div3" class="col_1_of_4 span_1_of_4">
+                    <h3><span id="LabelTituloLegalidad">LÉGALITÉ</span></h3>
+                        <div class="menuhorizPie">
+                               <ul>
+                                    <li></li><br />
+                                    <li><a id="HyperLinkPoliticadePrivacidad" href="https://squashbad33-fr.matchpoint.com.es/files.ashx?cmd=get&amp;id=1e3242230fce4bcc85e46cb511f21f3d" target="_blank">Politique de confidentialité</a></li><br />
+                                    <li></li><br />
+                                    <li></li>
+                               </ul>
+                        </div>
+                </div>
+
+            </div>
+        </div>
+
+        <div class="copy-right" id="div4">
+			<div class="wrap_pie">
+			        <a href="https://tpcmatchpoint.com/fr" target="_blank">
+                        <span id="Label11" style="margin-right:5px;vertical-align: middle">Powered by</span> <img id="ImageLogoMatchPoint" src="images/logo-matchpoint-blue-white.png" alt="Management Software Sports Centres" style="vertical-align: middle; max-width:120px" />
+                        <br/>
+                        <span id="LabelTituloMatchPoint" style="margin-top:10px; display:block; color:rgba(255,255,255,0.5)!important; font-weight:700!important">Logiciel de Gestion de Centres Sportifs</span>  
+                    </a>
+		        <div class="clear"></div>
+		    </div>	
+	    </div>
+    </footer>
+    <div class="pie2"></div>
+
+    </div>
+
+
+<div id="banner-cookies-preferences" class="banner-cookies-hidden">
+            <input type="hidden" name="ctl00$HiddenTiposCookiesSeleccionados" id="HiddenTiposCookiesSeleccionados" />
+            <div id="contenido" class="contenido-cookie">
+                <div id="texto-introdución">
+                    <label style="display:none">
+                        <b>
+                            Cette page utilise des cookies
+                        </b>
+                    </label>
+                    <p>
+                        Les cookies de ce site sont utilisés pour personnaliser le contenu et les publicités, offrir des fonctionnalités de réseaux sociaux et analyser le trafic. En outre, nous partageons des informations sur l’utilisation que vous faites du site Web avec nos partenaires de médias sociaux, de publicité et d’analyse Web, qui peuvent les combiner avec d’autres informations que vous leur avez fournies ou que vous avez recueillies à partir de l’utilisation que vous avez faite de vos services.
+                    </p>
+                </div>
+                <div id="botoneria">
+
+                   <input type="submit" name="ctl00$ButtonPermitirNecesarios" value="Décliner" id="ButtonPermitirNecesarios" class="boton boton-userpreferences" style="margin-left:0px" />
+                    <input type="submit" name="ctl00$ButtonPermitirSeleccion" value="Configuration" id="ButtonPermitirSeleccion" class="boton boton-userpreferences" />
+                    <input type="submit" name="ctl00$ButtonPermitirTodos" value="Accepter" id="ButtonPermitirTodos" class="boton boton-userpreferences" />
+                </div>
+                <div id="check-box-selections">
+                </div>
+                <div id="detalles-userpreferences">
+                    <div class="tab">
+                        <input name="ctl00$ctl15" type="button" class="tablinks tab-button" onclick="openCookieOption(event, &#39;cookie-declaration&#39;)" value="Politique de cookies" />
+                        <input name="ctl00$ctl16" type="button" class="tablinks tab-button" onclick="openCookieOption(event, &#39;about-cookies&#39;)" value="Déclaration des cookies" />
+                    </div>
+
+                    <div id="cookie-declaration" class="tabcontent" style="overflow: auto;">
+                        <div class="col-25 tab-left" id="tab-left">
+                        </div>
+                        <div class="col-75" id="tab-right">
+                        </div>
+                    </div>
+
+                    <div id="about-cookies" class="tabcontent">
+                    </div>
+
+                </div>
+            </div>
+</div>
+
+
+
+
+<script type="text/javascript">
+//<![CDATA[
+var Page_Validators =  new Array(document.getElementById("ContentPlaceHolderContenido_Login1_UserNameRequired"), document.getElementById("ContentPlaceHolderContenido_Login1_PasswordRequired"));
+//]]>
+</script>
+
+<script type="text/javascript">
+//<![CDATA[
+var ContentPlaceHolderContenido_Login1_UserNameRequired = document.all ? document.all["ContentPlaceHolderContenido_Login1_UserNameRequired"] : document.getElementById("ContentPlaceHolderContenido_Login1_UserNameRequired");
+ContentPlaceHolderContenido_Login1_UserNameRequired.controltovalidate = "ContentPlaceHolderContenido_Login1_UserName";
+ContentPlaceHolderContenido_Login1_UserNameRequired.errormessage = "Nom d\'utilisateur est requis.";
+ContentPlaceHolderContenido_Login1_UserNameRequired.validationGroup = "Login2";
+ContentPlaceHolderContenido_Login1_UserNameRequired.evaluationfunction = "RequiredFieldValidatorEvaluateIsValid";
+ContentPlaceHolderContenido_Login1_UserNameRequired.initialvalue = "";
+var ContentPlaceHolderContenido_Login1_PasswordRequired = document.all ? document.all["ContentPlaceHolderContenido_Login1_PasswordRequired"] : document.getElementById("ContentPlaceHolderContenido_Login1_PasswordRequired");
+ContentPlaceHolderContenido_Login1_PasswordRequired.controltovalidate = "ContentPlaceHolderContenido_Login1_Password";
+ContentPlaceHolderContenido_Login1_PasswordRequired.errormessage = "Mot de passe requis.";
+ContentPlaceHolderContenido_Login1_PasswordRequired.validationGroup = "Login2";
+ContentPlaceHolderContenido_Login1_PasswordRequired.evaluationfunction = "RequiredFieldValidatorEvaluateIsValid";
+ContentPlaceHolderContenido_Login1_PasswordRequired.initialvalue = "";
+//]]>
+</script>
+
+
+<script type="text/javascript">
+//<![CDATA[
+window.mp_textos = window.mp_textos || {};window.mp_textos.cookiesPolitica = "Ce site utilise ses propres cookies et des cookies tiers pour améliorer votre expérience de navigation. Si vous continuez à utiliser le site, nous considérerons que vous acceptez l'utilisation des cookies.";window.mp_textos.cookiesAceptar = 'Accepter';window.mp_textos.cookiesVerPolitica = 'Voir la politique';window.mp_textos.cookiesUrlPolitica = '../politica-cookies-fr.html';cargarValoresIniciales();
+var Page_ValidationActive = false;
+if (typeof(ValidatorOnLoad) == "function") {
+    ValidatorOnLoad();
+}
+
+function ValidatorOnSubmit() {
+    if (Page_ValidationActive) {
+        return ValidatorCommonOnSubmit();
+    }
+    else {
+        return true;
+    }
+}
+        
+document.getElementById('ContentPlaceHolderContenido_Login1_UserNameRequired').dispose = function() {
+    Array.remove(Page_Validators, document.getElementById('ContentPlaceHolderContenido_Login1_UserNameRequired'));
+}
+
+document.getElementById('ContentPlaceHolderContenido_Login1_PasswordRequired').dispose = function() {
+    Array.remove(Page_Validators, document.getElementById('ContentPlaceHolderContenido_Login1_PasswordRequired'));
+}
+//]]>
+</script>
+</form>
+    
+
+
+</body>
+</html>

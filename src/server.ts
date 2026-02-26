@@ -1,0 +1,51 @@
+import express from 'express';
+import cors from 'cors';
+import { SlotAggregator } from './aggregator.js';
+import { parseISO, isValid } from 'date-fns';
+
+const app = express();
+const port = process.env.PORT || 3000;
+
+app.use(cors());
+app.use(express.json());
+
+const aggregator = new SlotAggregator();
+// Démarrer le daemon de mise en cache automatique toutes les 10 minutes
+aggregator.startCacheDaemon(10 * 60 * 1000);
+
+app.get('/api/slots', async (req, res) => {
+    try {
+        const dateParam = req.query.date as string;
+
+        if (!dateParam) {
+            return res.status(400).json({ error: 'Missing date parameter' });
+        }
+
+        const date = parseISO(dateParam);
+        if (!isValid(date)) {
+            return res.status(400).json({ error: 'Invalid date parameter. Use YYYY-MM-DD' });
+        }
+
+        const days = parseInt(req.query.days as string) || 1;
+        const maxDays = 7;
+        const safeDays = Math.min(Math.max(1, days), maxDays);
+
+        console.log(`[API] Fetching slots for date: ${dateParam}, days: ${safeDays}`);
+
+        const slots = await aggregator.fetchSlotsRange(date, safeDays);
+
+        res.json({
+            count: slots.length,
+            requestedDate: dateParam,
+            requestedDays: safeDays,
+            slots: slots
+        });
+    } catch (error) {
+        console.error('Error in /api/slots endpoint:', error);
+        res.status(500).json({ error: 'Internal server error' });
+    }
+});
+
+app.listen(port, () => {
+    console.log(`Slot Aggregator API running on http://localhost:${port}`);
+});
