@@ -20,7 +20,6 @@
     "express": "^5.2.1",
     "node-tesseract-ocr": "^2.2.1",
     "playwright": "^1.58.2",
-    "resend": "^6.9.2",
     "ts-node": "^10.9.2",
     "typescript": "^5.9.3"
   },
