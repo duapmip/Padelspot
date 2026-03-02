@@ -617,7 +617,7 @@ body {
 .dp-date-pill {
     background: var(--off-white-clay);
     border-radius: 1.25rem;
-    padding: 0.5rem;
+    padding: 0.3rem;
     width: 70px;
     height: 70px;
     display: flex;
@@ -671,7 +671,7 @@ body {
     background: #fff;
     border: 1px solid rgba(0, 0, 0, 0.04);
     border-radius: 1.5rem;
-    padding: 1rem;
+    padding: 0.6rem;
     width: 115px;
     height: 80px;
     display: flex;
@@ -811,6 +811,7 @@ body {
 
 /* MOBILE RESPONSIVE TWEAKS */
 @media (max-width: 768px) {
+
     /* Hero Search Bar */
     .hero-search-capsule {
         flex-direction: column !important;
@@ -820,7 +821,7 @@ body {
         gap: 0.5rem;
     }
 
-    .hero-search-capsule > div[style*="width: 1"] {
+    .hero-search-capsule>div[style*="width: 1"] {
         width: 100% !important;
         height: 1px !important;
         margin: 5px 0 !important;
@@ -830,9 +831,9 @@ body {
         padding: 0.75rem 1rem !important;
         border-radius: 1rem !important;
         min-height: 44px;
-        background: rgba(0,0,0,0.02);
+        background: rgba(0, 0, 0, 0.02);
     }
-    
+
     .hero-search-btn {
         width: 100%;
         margin: 0 !important;
@@ -893,23 +894,25 @@ body {
         padding: 1rem !important;
         border-radius: 1.5rem !important;
     }
-    
+
     .dp-selection-bar button {
         width: 100%;
         justify-content: center;
     }
 
     /* Allow horizontal scroll on navs */
-    .dp-calbar, .dp-timeline-scroll {
+    .dp-calbar,
+    .dp-timeline-scroll {
         overflow-x: auto !important;
         scroll-behavior: smooth;
         -webkit-overflow-scrolling: touch;
     }
-    
-    .dp-calbar::-webkit-scrollbar, .dp-timeline-scroll::-webkit-scrollbar {
+
+    .dp-calbar::-webkit-scrollbar,
+    .dp-timeline-scroll::-webkit-scrollbar {
         display: none;
     }
-    
+
     .dp-date-pill {
         min-width: 60px;
     }
@@ -921,7 +924,7 @@ body {
         gap: 1rem;
     }
 
-    .dp-offer-item > div:last-child {
+    .dp-offer-item>div:last-child {
         width: 100%;
         justify-content: space-between;
     }
