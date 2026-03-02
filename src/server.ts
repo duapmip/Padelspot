@@ -19,8 +19,33 @@ app.use(express.static(path.join(__dirname, '../frontend/dist')));
 
 
 const aggregator = new SlotAggregator();
-// Démarrer le daemon de mise en cache automatique toutes les 10 minutes
-aggregator.startCacheDaemon(10 * 60 * 1000);
+// Render Cron-Job Sync Route
+app.get('/cron-sync', async (req, res) => {
+    // Basic protection against random people clicking the link
+    const secret = req.query.secret;
+    if (secret !== process.env.CRON_SECRET) {
+        return res.status(403).json({ error: 'Unauthorized' });
+    }
+
+    // Set a long timeout since scraping 15 days takes a while
+    req.setTimeout(5 * 60 * 1000); // 5 minutes
+
+    const daysStr = req.query.days as string;
+    const daysToScrape = daysStr ? parseInt(daysStr) : 15; // default to 15 days for Render Cron!
+
+    console.log(`[CRON] Started Sync for ${daysToScrape} days...`);
+
+    // We send back an immediate response so the cron-job service doesn't timeout
+    // and let the scraping run asynchronously.
+    res.json({ message: `Sync started for ${daysToScrape} days. Data will be saved to Supabase shortly.` });
+
+    try {
+        await aggregator.runFullSync(daysToScrape);
+        console.log(`[CRON] ✅ Total Sync cycle finished successfully.`);
+    } catch (e) {
+        console.error(`[CRON] ❌ Sync failed:`, e);
+    }
+});
 
 app.get('/api/slots', async (req, res) => {
     try {

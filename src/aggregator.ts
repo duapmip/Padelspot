@@ -27,69 +27,65 @@ export class SlotAggregator {
         this.providers.push(new AnybuddyBordeauxScraper());
     }
 
-    startCacheDaemon(refreshIntervalMs = 5 * 60 * 1000) {
-        console.log("[Aggregator] Starting background cache daemon...");
+    async runFullSync(daysToScrape: number) {
+        if (this.isUpdating) {
+            console.log("[Aggregator] Sync already in progress, skipping...");
+            return;
+        }
+        this.isUpdating = true;
+        try {
+            const today = new Date();
+            const datesToCache = Array.from({ length: daysToScrape }, (_, i) => addDays(today, i));
 
-        const updateCache = async () => {
-            if (this.isUpdating) return;
-            this.isUpdating = true;
-            try {
-                const today = new Date();
-                const datesToCache = [today, addDays(today, 1), addDays(today, 2), addDays(today, 3)];
-                for (const date of datesToCache) {
-                    const dateKey = format(date, 'yyyy-MM-dd');
-                    console.log(`[Daemon] Scraping fresh slots for ${dateKey}...`);
-                    const slots = await this.fetchFreshSlotsForDate(date);
+            for (const date of datesToCache) {
+                const dateKey = format(date, 'yyyy-MM-dd');
+                console.log(`[Sync] Scraping fresh slots for ${dateKey}...`);
+                const slots = await this.fetchFreshSlotsForDate(date);
 
-                    const dbSlots = slots.map(slot => ({
-                        id: slot.id, // Using clusterKey as stable ID
-                        provider: slot.provider,
-                        center_name: slot.centerName,
-                        court_name: slot.courtName || 'Default Court',
-                        start_time: slot.startTime.toISOString(),
-                        end_time: slot.endTime.toISOString(),
-                        duration_minutes: slot.durationMinutes,
-                        price: slot.price,
-                        currency: slot.currency || 'EUR',
-                        booking_url: slot.bookingUrl
-                    }));
+                const dbSlots = slots.map(slot => ({
+                    id: slot.id,
+                    provider: slot.provider,
+                    center_name: slot.centerName,
+                    court_name: slot.courtName || 'Default Court',
+                    start_time: slot.startTime.toISOString(),
+                    end_time: slot.endTime.toISOString(),
+                    duration_minutes: slot.durationMinutes,
+                    price: slot.price,
+                    currency: slot.currency || 'EUR',
+                    booking_url: slot.bookingUrl
+                }));
 
-                    // Clear existing old slots for this specific date range
-                    const startOfDay = new Date(date).setHours(0, 0, 0, 0);
-                    const endOfDay = new Date(date).setHours(23, 59, 59, 999);
+                // Clear existing old slots for this specific date range
+                const startOfDay = new Date(date).setHours(0, 0, 0, 0);
+                const endOfDay = new Date(date).setHours(23, 59, 59, 999);
 
-                    const { error: delError } = await supabase.from('slots')
-                        .delete()
-                        .gte('start_time', new Date(startOfDay).toISOString())
-                        .lte('start_time', new Date(endOfDay).toISOString());
+                const { error: delError } = await supabase.from('slots')
+                    .delete()
+                    .gte('start_time', new Date(startOfDay).toISOString())
+                    .lte('start_time', new Date(endOfDay).toISOString());
 
-                    if (delError) {
-                        console.error(`[Supabase Error] Can't delete old slots for ${dateKey}:`, delError);
-                        continue;
-                    }
-
-                    if (dbSlots.length > 0) {
-                        const { error: insError } = await supabase.from('slots').insert(dbSlots);
-                        if (insError) {
-                            console.error(`[Supabase Error] Can't insert fresh slots for ${dateKey}:`, insError);
-                        } else {
-                            console.log(`[Supabase] ✅ Successfully synced ${dbSlots.length} slots for ${dateKey}`);
-                        }
-                    } else {
-                        console.log(`[Supabase] ⚠️ No slots found for ${dateKey}`);
-                    }
+                if (delError) {
+                    console.error(`[Supabase Error] Can't delete old slots for ${dateKey}:`, delError);
+                    continue;
                 }
-                console.log("[Daemon] Synchronization cycle finished.");
-            } catch (error) {
-                console.error("[Daemon] Error during sync:", error);
-            } finally {
-                this.isUpdating = false;
-            }
-        };
 
-        // Run immediately, then every X ms
-        updateCache();
-        setInterval(updateCache, refreshIntervalMs);
+                if (dbSlots.length > 0) {
+                    const { error: insError } = await supabase.from('slots').insert(dbSlots);
+                    if (insError) {
+                        console.error(`[Supabase Error] Can't insert fresh slots for ${dateKey}:`, insError);
+                    } else {
+                        console.log(`[Supabase] ✅ Successfully synced ${dbSlots.length} slots for ${dateKey}`);
+                    }
+                } else {
+                    console.log(`[Supabase] ⚠️ No slots found for ${dateKey}`);
+                }
+            }
+            console.log("[Sync] Synchronization cycle finished.");
+        } catch (error) {
+            console.error("[Sync] Error during sync:", error);
+        } finally {
+            this.isUpdating = false;
+        }
     }
 
     async fetchAllSlots(date: Date): Promise<Slot[]> {
