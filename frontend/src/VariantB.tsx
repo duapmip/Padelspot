@@ -761,6 +761,7 @@ export default function VariantB() {
 
     // Filters
     const [durationFilter, setDurationFilter] = useState<string>('all');
+    const [matchTypeFilter, setMatchTypeFilter] = useState<'all' | '1v1' | '2v2'>('2v2');
 
     // Hero Search State
     const [isDatePickerOpen, setIsDatePickerOpen] = useState(false);
@@ -802,9 +803,13 @@ export default function VariantB() {
             // to avoid lint errors since they were removed, or just not evaluate them if not used.
             const isDurationMatch = durationFilter === 'all' || slot.durationMinutes === parseInt(durationFilter);
 
-            return isTimeMatch && isDurationMatch;
+            const is1v1 = slot.courtName ? (slot.courtName.toLowerCase().includes('simple') || slot.courtName.toLowerCase().includes('1v1')) : false;
+            const is2v2 = !is1v1;
+            const isMatchTypeMatch = matchTypeFilter === 'all' || (matchTypeFilter === '1v1' && is1v1) || (matchTypeFilter === '2v2' && is2v2);
+
+            return isTimeMatch && isDurationMatch && isMatchTypeMatch;
         });
-    }, [slots, selections, durationFilter]);
+    }, [slots, selections, durationFilter, matchTypeFilter]);
 
     const filteredSlots = useMemo(() => {
         return allFilteredSlots.filter(slot => {
@@ -1396,6 +1401,30 @@ export default function VariantB() {
                                                 }}
                                             >
                                                 {dur}'
+                                            </button>
+                                        ))}
+
+                                        <div style={{ width: 1, height: 20, background: '#eee', margin: '0 0.25rem' }} />
+
+                                        {['1v1', '2v2'].map(type => (
+                                            <button
+                                                key={type}
+                                                onClick={() => setMatchTypeFilter(matchTypeFilter === type as any ? 'all' : type as any)}
+                                                style={{
+                                                    background: matchTypeFilter === type ? 'var(--sun-blaze)' : '#fff',
+                                                    color: matchTypeFilter === type ? '#fff' : 'inherit',
+                                                    border: '1px solid rgba(0,0,0,0.1)',
+                                                    borderRadius: '999px',
+                                                    padding: '0.5rem 1.25rem',
+                                                    fontSize: '0.75rem',
+                                                    fontWeight: 900,
+                                                    cursor: 'pointer',
+                                                    display: 'flex',
+                                                    alignItems: 'center',
+                                                    gap: '0.2rem'
+                                                }}
+                                            >
+                                                <Users size={12} /> {type === '1v1' ? 'Solo' : 'Double'}
                                             </button>
                                         ))}
                                     </div>
