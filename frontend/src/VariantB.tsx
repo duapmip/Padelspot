@@ -7,6 +7,7 @@ import { MapContainer, TileLayer, Marker } from 'react-leaflet';
 import L from 'leaflet';
 import gsap from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
+import { supabase } from './supabase';
 import './VariantB.css';
 
 gsap.registerPlugin(ScrollTrigger);
@@ -29,8 +30,8 @@ interface Slot {
     id: string;
     provider: string;
     centerName: string;
-    startTime: string;
-    endTime: string;
+    startTime: Date;
+    endTime: Date;
     durationMinutes: number;
     price: number;
     currency: string;
@@ -788,7 +789,7 @@ export default function VariantB() {
     // --- COMPUTED ---
     const allFilteredSlots = useMemo(() => {
         return slots.filter((slot) => {
-            const d = parseISO(slot.startTime);
+            const d = slot.startTime;
             const slotTotalMins = d.getHours() * 60 + d.getMinutes();
             const dayKey = format(d, 'yyyy-MM-dd');
             const sel = selections.find(s => ALL_DAYS[s.dayIndex].key === dayKey);
@@ -807,7 +808,7 @@ export default function VariantB() {
 
     const filteredSlots = useMemo(() => {
         return allFilteredSlots.filter(slot => {
-            const d = parseISO(slot.startTime);
+            const d = slot.startTime;
             const dayKey = format(d, 'yyyy-MM-dd');
             const sel = selections.find(s => ALL_DAYS[s.dayIndex].key === dayKey);
             if (!sel) return false;
@@ -821,10 +822,10 @@ export default function VariantB() {
     const dailyGroups = useMemo(() => {
         const daysGroup: Record<string, any[]> = {};
         allFilteredSlots.forEach(slot => {
-            const dayKey = format(parseISO(slot.startTime), 'yyyy-MM-dd');
+            const dayKey = format(slot.startTime, 'yyyy-MM-dd');
             if (!daysGroup[dayKey]) daysGroup[dayKey] = [];
 
-            const timeKey = format(parseISO(slot.startTime), 'HH:mm');
+            const timeKey = format(slot.startTime, 'HH:mm');
             let timeGroup = daysGroup[dayKey].find(g => g.time === timeKey);
             if (!timeGroup) {
                 timeGroup = { time: timeKey, slots: [] };
@@ -876,19 +877,32 @@ export default function VariantB() {
                     const firstDate = ALL_DAYS[sorted[0]?.dayIndex || 0].date;
                     const lastDate = ALL_DAYS[sorted[sorted.length - 1]?.dayIndex || 0].date;
                     const diff = Math.ceil((lastDate.getTime() - firstDate.getTime()) / (1000 * 60 * 60 * 24));
-                    const fetchDateStr = format(firstDate, 'yyyy-MM-dd');
-                    const fetchDays = Math.max(7, diff + 1);
 
-                    const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000';
-                    const response = await fetch(`${API_BASE_URL}/api/slots?date=${fetchDateStr}&days=${fetchDays}`);
-                    const data = await response.json();
-                    const enrichedSlots = (data.slots || []).map((slot: any) => {
-                        let normalizedName = slot.centerName;
-                        let coords = bordeauxCoordinates[slot.centerName];
+                    const fetchStartStr = format(firstDate, "yyyy-MM-dd'T'00:00:00.000'Z'"); // Beginning of range
+                    const fetchEndStr = format(addDays(firstDate, Math.max(7, diff + 1)), "yyyy-MM-dd'T'23:59:59.999'Z'");
+
+                    console.log(`Fetching from Supabase from ${fetchStartStr} to ${fetchEndStr}`);
+
+                    const { data: supabaseSlots, error } = await supabase
+                        .from('slots')
+                        .select('*')
+                        .gte('start_time', fetchStartStr)
+                        .lte('start_time', fetchEndStr)
+                        .order('start_time', { ascending: true });
+
+                    if (error) {
+                        console.error('Error fetching Supabase slots:', error);
+                        setSlots([]);
+                        return;
+                    }
+
+                    const enrichedSlots = (supabaseSlots || []).map((slot: any) => {
+                        let normalizedName = slot.center_name;
+                        let coords = bordeauxCoordinates[slot.center_name];
                         if (!coords) {
                             const entry = Object.entries(bordeauxCoordinates).find(([key]) =>
-                                slot.centerName.toUpperCase().includes(key.toUpperCase()) ||
-                                key.toUpperCase().includes(slot.centerName.toUpperCase())
+                                slot.center_name.toUpperCase().includes(key.toUpperCase()) ||
+                                key.toUpperCase().includes(slot.center_name.toUpperCase())
                             );
                             if (entry) {
                                 coords = entry[1];
@@ -896,8 +910,16 @@ export default function VariantB() {
                             }
                         }
                         return {
-                            ...slot,
+                            id: slot.id,
+                            provider: slot.provider,
                             centerName: normalizedName,
+                            courtName: slot.court_name,
+                            startTime: new Date(slot.start_time),
+                            endTime: new Date(slot.end_time),
+                            durationMinutes: slot.duration_minutes,
+                            price: parseFloat(slot.price),
+                            currency: slot.currency,
+                            bookingUrl: slot.booking_url,
                             lat: coords?.[0] || 44.84,
                             lng: coords?.[1] || -0.57 + Math.random() * 0.05
                         };
@@ -1592,9 +1614,9 @@ export default function VariantB() {
                                         <div key={id} style={{ background: '#fff', padding: '2rem', borderRadius: '2rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', boxShadow: '0 4px 20px rgba(0,0,0,0.02)' }}>
                                             <div>
                                                 <div style={{ color: 'var(--sun-blaze)', fontWeight: 950, fontSize: '0.8rem', textTransform: 'uppercase', marginBottom: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                                                    <Calendar size={14} /> {format(parseISO(slot.startTime), 'EEEE d MMMM', { locale: fr })}
+                                                    <Calendar size={14} /> {format(slot.startTime, 'EEEE d MMMM', { locale: fr })}
                                                 </div>
-                                                <div style={{ fontSize: '2rem', fontWeight: 950 }}>{format(parseISO(slot.startTime), 'HH:mm')}</div>
+                                                <div style={{ fontSize: '2rem', fontWeight: 950 }}>{format(slot.startTime, 'HH:mm')}</div>
                                                 <div style={{ opacity: 0.5, fontSize: '1rem', fontWeight: 600 }}>{slot.centerName} · {slot.durationMinutes} min</div>
                                             </div>
                                             <button onClick={() => toggleSlotSelection(id)} style={{ background: 'rgba(0,0,0,0.03)', border: 'none', borderRadius: '50%', width: '3rem', height: '3rem', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}><X size={24} /></button>
