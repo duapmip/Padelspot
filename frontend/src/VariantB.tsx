@@ -879,7 +879,8 @@ export default function VariantB() {
                     const fetchDateStr = format(firstDate, 'yyyy-MM-dd');
                     const fetchDays = Math.max(7, diff + 1);
 
-                    const response = await fetch(`http://localhost:3000/api/slots?date=${fetchDateStr}&days=${fetchDays}`);
+                    const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000';
+                    const response = await fetch(`${API_BASE_URL}/api/slots?date=${fetchDateStr}&days=${fetchDays}`);
                     const data = await response.json();
                     const enrichedSlots = (data.slots || []).map((slot: any) => {
                         let normalizedName = slot.centerName;
