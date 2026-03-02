@@ -1086,7 +1086,7 @@ export default function VariantB() {
                                 <div style={{ fontFamily: 'var(--font-ui)', fontSize: '1.1rem', fontWeight: 900, marginBottom: '0.25rem' }}>{item.time}</div>
                                 {item.type === 'available' ? (
                                     <>
-                                        <div style={{ fontSize: '0.8rem', fontWeight: 800, opacity: 0.9 }}>{Math.min(...item.group.slots.map((s: any) => s.price))}€</div>
+                                        <div style={{ fontSize: '0.85rem', fontWeight: 500, opacity: 0.85 }}>{Math.min(...item.group.slots.map((s: any) => s.price))}€</div>
                                         <div style={{ fontSize: '0.55rem', opacity: 0.6 }}>{item.group.slots.length} complexes</div>
                                     </>
                                 ) : (
@@ -1459,8 +1459,8 @@ export default function VariantB() {
                                                                     <X size={12} />
                                                                 </div>
                                                             )}
-                                                            <div style={{ fontSize: '0.8rem', fontWeight: 800, textTransform: 'uppercase', opacity: 0.8 }}>{d.dayName}</div>
-                                                            <div style={{ fontSize: '1.1rem', fontWeight: 900 }}>{d.dateNum}</div>
+                                                            <div style={{ fontSize: '0.95rem', fontWeight: 900, textTransform: 'uppercase', opacity: 0.9 }}>{d.dayName}</div>
+                                                            <div style={{ fontSize: '0.9rem', fontWeight: 500, opacity: 0.8 }}>{d.dateNum}</div>
                                                             {isSelected && <div style={{ fontSize: '0.7rem', fontWeight: 900, color: isEditing ? 'var(--sun-blaze)' : 'inherit' }}>{sel.hour}H</div>}
                                                         </div>
 
