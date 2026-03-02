@@ -136,7 +136,7 @@ export class SlotAggregator {
         return allSlots;
     }
 
-    private async fetchFreshSlotsForDate(date: Date): Promise<Slot[]> {
+    async fetchFreshSlotsForDate(date: Date): Promise<Slot[]> {
         const fetchPromises = this.providers.map(provider =>
             provider.fetchSlots(date).catch(err => {
                 console.error(`Error fetching slots from ${provider.name}:`, err);
