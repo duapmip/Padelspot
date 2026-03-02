@@ -131,6 +131,24 @@ export class PadelHouseScraper implements BookingProvider {
 
                     for (const duration of slotRaw.durations) {
                         const endTime = new Date(startTime.getTime() + duration * 60000);
+                        // Padel House: 48€ (Off-Peak) / 60€ (Peak) for 90min
+                        let price = 48; // Default off-peak
+                        const dayOfWeek = startTime.getDay();
+                        const hour = startTime.getHours();
+                        const minute = startTime.getMinutes();
+                        const timeInMins = hour * 60 + minute;
+
+                        if (duration === 90) {
+                            if (dayOfWeek >= 1 && dayOfWeek <= 5) {
+                                // Weekday Peak: 18:00 (1080) to 23:00
+                                if (timeInMins >= 1080) {
+                                    price = 60;
+                                }
+                            }
+                            // Weekends are off-peak all day
+                        } else if (duration === 60) {
+                            price = price / 1.5;
+                        }
 
                         slots.push({
                             id: `padelhouse-${courtId}-${startTime.getTime()}-${duration}`,
@@ -139,7 +157,7 @@ export class PadelHouseScraper implements BookingProvider {
                             startTime,
                             endTime,
                             durationMinutes: duration,
-                            price: 0, // Prices are not directly in this simplified slot object, usually fixed per club
+                            price: price,
                             currency: 'EUR',
                             bookingUrl: 'https://padelhousefrance.gestion-sports.com/appli/Reservation',
                             courtName: court.name,

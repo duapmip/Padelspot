@@ -47,7 +47,30 @@ export class UCPAScraper implements BookingProvider {
                     const durationMs = endTime.getTime() - startTime.getTime();
                     const durationMinutes = Math.round(durationMs / 60000);
 
-                    // UCPA prices: ~48€ off-peak, ~60€ peak (not in API)
+                    // UCPA prices: ~48€ off-peak, ~60€ peak
+                    let price = 48; // Default off-peak
+                    const dayOfWeek = startTime.getDay(); // 0 is Sunday, 1 is Monday...
+                    const hour = startTime.getHours();
+                    const minute = startTime.getMinutes();
+                    const timeInMins = hour * 60 + minute;
+
+                    if (durationMinutes === 90) { // All prices are based on 1.5h slots it seems
+                        if (dayOfWeek >= 1 && dayOfWeek <= 5) {
+                            // Weekday
+                            // Peak: 18:00 (1080) to 23:00
+                            if (timeInMins >= 1080) {
+                                price = 60;
+                            }
+                        } else {
+                            // Weekend (Saturday=6, Sunday=0)
+                            // Peak: 10:30-12:00 (630), 15:00-18:00 (900-1080), 18:00-21:00 (1080-1260)
+                            // So peak is 10:30+, and 15:00-21:00
+                            if ((timeInMins >= 630 && timeInMins < 720) || (timeInMins >= 900 && timeInMins < 1260)) {
+                                price = 60;
+                            }
+                        }
+                    }
+
                     const courtCount = item.stock || 1;
 
                     // One slot with court count info
@@ -58,7 +81,7 @@ export class UCPAScraper implements BookingProvider {
                         startTime,
                         endTime,
                         durationMinutes,
-                        price: 0, // UCPA API doesn't expose prices
+                        price,
                         currency: 'EUR',
                         bookingUrl: 'https://www.ucpa.com/sport-station/bordeaux/reservation-padel',
                         courtName: `Padel`,

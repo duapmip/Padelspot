@@ -138,14 +138,38 @@ export class Padel33Scraper implements BookingProvider {
 
                         if (isNaN(startTime.getTime())) continue;
 
+                        const durationMinutes = slot.Minutos || 90;
+
+                        // Padel 33 Pricing (based on 4 pax)
+                        // Off-peak: 4€/pax/30min (48€ per 90m court). Mon-Fri 10:30-12:00 & 14:00-17:00
+                        // Peak: 5€/pax/30min (60€ per 90m court). Mon-Fri 12-14h, 17h-closing, and weekends all day
+                        let price = 60; // Default to Peak 
+                        const dayOfWeek = startTime.getDay();
+                        const hour = startTime.getHours();
+                        const minute = startTime.getMinutes();
+                        const timeInMins = hour * 60 + minute;
+
+                        if (dayOfWeek >= 1 && dayOfWeek <= 5) {
+                            // Weekday
+                            // Off-peak 10:30 (630) to 12:00 (720) AND 14:00 (840) to 17:00 (1020)
+                            if ((timeInMins >= 630 && timeInMins < 720) || (timeInMins >= 840 && timeInMins < 1020)) {
+                                price = 48;
+                            }
+                        }
+
+                        // Adjust if not exactly 90 mins (API sometimes outputs 60 or 120)
+                        if (durationMinutes !== 90) {
+                            price = (price / 90) * durationMinutes;
+                        }
+
                         slots.push({
                             id: `padel33-${grid.id}-${court.Id}-${slot.Id}`,
                             provider: 'matchpoint',
                             centerName: grid.name,
                             startTime,
                             endTime,
-                            durationMinutes: slot.Minutos || 90,
-                            price: 0, // MatchPoint doesn't expose price in the API
+                            durationMinutes,
+                            price,
                             currency: 'EUR',
                             bookingUrl: grid.bookingUrl,
                             courtName,
