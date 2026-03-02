@@ -1,5 +1,7 @@
 {
   "compilerOptions": {
+    "outDir": "./dist",
+    "rootDir": "./src",
     "module": "NodeNext",
     "target": "ESNext",
     "moduleResolution": "NodeNext",
@@ -8,5 +10,8 @@
     "strict": true,
     "skipLibCheck": true,
     "verbatimModuleSyntax": false
-  }
+  },
+  "include": [
+    "src/**/*"
+  ]
 }
