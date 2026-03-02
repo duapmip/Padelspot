@@ -1406,27 +1406,24 @@ export default function VariantB() {
 
                                         <div style={{ width: 1, height: 20, background: '#eee', margin: '0 0.25rem' }} />
 
-                                        {['1v1', '2v2'].map(type => (
-                                            <button
-                                                key={type}
-                                                onClick={() => setMatchTypeFilter(matchTypeFilter === type as any ? 'all' : type as any)}
-                                                style={{
-                                                    background: matchTypeFilter === type ? 'var(--sun-blaze)' : '#fff',
-                                                    color: matchTypeFilter === type ? '#fff' : 'inherit',
-                                                    border: '1px solid rgba(0,0,0,0.1)',
-                                                    borderRadius: '999px',
-                                                    padding: '0.5rem 1.25rem',
-                                                    fontSize: '0.75rem',
-                                                    fontWeight: 900,
-                                                    cursor: 'pointer',
-                                                    display: 'flex',
-                                                    alignItems: 'center',
-                                                    gap: '0.2rem'
-                                                }}
-                                            >
-                                                <Users size={12} /> {type === '1v1' ? 'Solo' : 'Double'}
-                                            </button>
-                                        ))}
+                                        <button
+                                            onClick={() => setMatchTypeFilter(matchTypeFilter === '2v2' ? '1v1' : '2v2')}
+                                            style={{
+                                                background: 'var(--sun-blaze)',
+                                                color: '#fff',
+                                                border: '1px solid rgba(0,0,0,0.1)',
+                                                borderRadius: '999px',
+                                                padding: '0.5rem 1.25rem',
+                                                fontSize: '0.75rem',
+                                                fontWeight: 900,
+                                                cursor: 'pointer',
+                                                display: 'flex',
+                                                alignItems: 'center',
+                                                gap: '0.3rem'
+                                            }}
+                                        >
+                                            <Users size={12} /> {matchTypeFilter === '1v1' ? 'Solo (1v1)' : 'Double (2v2)'}
+                                        </button>
                                     </div>
                                 </div>
 
