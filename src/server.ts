@@ -14,9 +14,7 @@ const port = process.env.PORT || 3000;
 app.use(cors());
 app.use(express.json());
 
-// Serve static files from the frontend react build
-app.use(express.static(path.join(__dirname, '../frontend/dist')));
-
+// Render is now ONLY an API backend worker. The frontend is on Vercel.
 
 const aggregator = new SlotAggregator();
 // Render Cron-Job Sync Route
@@ -80,8 +78,8 @@ app.get('/api/slots', async (req, res) => {
     }
 });
 
-app.get(/.*/, (req, res) => {
-    res.sendFile(path.join(__dirname, '../frontend/dist/index.html'));
+app.get('/', (req, res) => {
+    res.json({ status: 'ok', message: 'PadelSpot Cron Worker API is running.' });
 });
 
 app.listen(port, () => {
