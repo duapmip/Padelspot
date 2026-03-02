@@ -42,7 +42,7 @@ app.get('/api/slots', async (req, res) => {
         res.status(500).json({ error: 'Internal server error' });
     }
 });
-app.get('*', (req, res) => {
+app.get(/.*/, (req, res) => {
     res.sendFile(path.join(__dirname, '../frontend/dist/index.html'));
 });
 app.listen(port, () => {
