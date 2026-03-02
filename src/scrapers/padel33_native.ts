@@ -1,10 +1,5 @@
-/**
- * Padel 33 - Native MatchPoint API Scraper
- * Uses Playwright for auth, then fetches real slot data from MatchPoint API
- */
+import axios from 'axios';
 import { BookingProvider, Slot } from '../types/slot.js';
-import { format } from 'date-fns';
-import { chromium, Browser, BrowserContext, Page } from 'playwright';
 
 const MATCHPOINT_BASE = 'https://squashbad33-fr.matchpoint.com.es';
 const EMAIL = 'padelbot.scraper@gmail.com';
@@ -21,61 +16,82 @@ const PADEL_GRIDS = [
 export class Padel33Scraper implements BookingProvider {
     name = 'Padel 33 (MatchPoint)';
 
-    private browser: Browser | null = null;
-    private page: Page | null = null;
     private apiKey: string | null = null;
+    private sessionCookie: string | null = null;
     private lastLoginTime = 0;
 
-    private async ensureLoggedIn(): Promise<{ page: Page; apiKey: string }> {
+    private async ensureLoggedIn(): Promise<{ sessionCookie: string; apiKey: string }> {
         const now = Date.now();
         // Re-login every 20 minutes (session could expire)
-        if (this.page && this.apiKey && (now - this.lastLoginTime) < 20 * 60 * 1000) {
-            return { page: this.page, apiKey: this.apiKey };
+        if (this.sessionCookie && this.apiKey && (now - this.lastLoginTime) < 20 * 60 * 1000) {
+            return { sessionCookie: this.sessionCookie, apiKey: this.apiKey };
         }
 
-        // Close previous browser if any
-        if (this.browser) {
-            try { await this.browser.close(); } catch { }
+        console.log('[Padel33] Logging into MatchPoint via API...');
+
+        try {
+            // 1. Get initial cookies and view states
+            const initRes = await axios.get(`${MATCHPOINT_BASE}/Login.aspx`, {
+                headers: { 'User-Agent': 'Mozilla/5.0' },
+                validateStatus: () => true
+            });
+            const setCookie = initRes.headers['set-cookie'] || [];
+            const initCookieStr = setCookie.map((c: string) => c.split(';')[0]).join('; ');
+
+            // Extract tokens
+            const viewStateMatch = initRes.data.match(/id="__VIEWSTATE"\s+value="([^"]+)"/);
+            const viewStateGenMatch = initRes.data.match(/id="__VIEWSTATEGENERATOR"\s+value="([^"]+)"/);
+            const eventValMatch = initRes.data.match(/id="__EVENTVALIDATION"\s+value="([^"]+)"/);
+
+            const params = new URLSearchParams();
+            if (viewStateMatch) params.append('__VIEWSTATE', viewStateMatch[1]);
+            if (viewStateGenMatch) params.append('__VIEWSTATEGENERATOR', viewStateGenMatch[1]);
+            if (eventValMatch) params.append('__EVENTVALIDATION', eventValMatch[1]);
+
+            params.append('ctl00$ContentPlaceHolderContenido$Login1$UserName', EMAIL);
+            params.append('ctl00$ContentPlaceHolderContenido$Login1$Password', PASSWORD);
+            params.append('ctl00$ContentPlaceHolderContenido$Login1$LoginButton', 'Connexion');
+
+            // 2. Perform Login POST
+            const postRes = await axios.post(`${MATCHPOINT_BASE}/Login.aspx`, params, {
+                headers: {
+                    'Cookie': initCookieStr,
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                    'User-Agent': 'Mozilla/5.0'
+                },
+                maxRedirects: 0,
+                validateStatus: () => true
+            });
+
+            // Update cookies
+            const loginCookies = postRes.headers['set-cookie'] || [];
+            const allCookiesStr = [...setCookie, ...loginCookies].map((c: string) => c.split(';')[0]).join('; ');
+
+            // 3. Fetch Grid page to get API Key
+            const gridRes = await axios.get(`${MATCHPOINT_BASE}/Booking/Grid.aspx`, {
+                headers: {
+                    'Cookie': allCookiesStr,
+                    'User-Agent': 'Mozilla/5.0'
+                },
+                validateStatus: () => true
+            });
+
+            const keyMatch = gridRes.data.match(/hl90njda2b89k='([^']+)'/);
+            if (!keyMatch) {
+                throw new Error('[Padel33] Could not extract API Key from Grid.aspx');
+            }
+
+            this.apiKey = keyMatch[1];
+            this.sessionCookie = allCookiesStr;
+            this.lastLoginTime = now;
+            console.log('[Padel33] ✅ Logged in successfully via API');
+
+            return { sessionCookie: this.sessionCookie, apiKey: this.apiKey };
+
+        } catch (error: any) {
+            console.error('[Padel33] Login error:', error.message);
+            throw error;
         }
-
-        console.log('[Padel33] Logging into MatchPoint...');
-        this.browser = await chromium.launch({ headless: true });
-        const context = await this.browser.newContext();
-        this.page = await context.newPage();
-
-        await this.page.goto(`${MATCHPOINT_BASE}/Login.aspx`, { waitUntil: 'domcontentloaded' });
-        await this.page.waitForTimeout(2000);
-
-        // Dismiss cookie overlay
-        await this.page.evaluate(() => {
-            document.querySelectorAll('.banner-block-screen, [class*="banner-block"]').forEach(el => el.remove());
-        });
-        await this.page.waitForTimeout(500);
-
-        await this.page.fill('#ContentPlaceHolderContenido_Login1_UserName', EMAIL);
-        await this.page.fill('#ContentPlaceHolderContenido_Login1_Password', PASSWORD);
-        await this.page.click('#ContentPlaceHolderContenido_Login1_LoginButton');
-        await this.page.waitForTimeout(3000);
-
-        // Navigate to booking grid to init API key
-        await this.page.goto(`${MATCHPOINT_BASE}/Booking/Grid.aspx`, { waitUntil: 'domcontentloaded' });
-        await this.page.waitForTimeout(3000);
-
-        // Dismiss cookie overlay again
-        await this.page.evaluate(() => {
-            document.querySelectorAll('.banner-block-screen, [class*="banner-block"]').forEach(el => el.remove());
-        });
-
-        this.apiKey = await this.page.evaluate(() => (window as any).hl90njda2b89k || '') as string;
-
-        if (!this.apiKey) {
-            throw new Error('[Padel33] Could not get API key after login');
-        }
-
-        this.lastLoginTime = now;
-        console.log('[Padel33] ✅ Logged in successfully');
-
-        return { page: this.page, apiKey: this.apiKey };
     }
 
     async fetchSlots(date: Date): Promise<Slot[]> {
@@ -83,21 +99,24 @@ export class Padel33Scraper implements BookingProvider {
         const dateStr = `${date.getDate()}/${date.getMonth() + 1}/${date.getFullYear()}`;
 
         try {
-            const { page, apiKey } = await this.ensureLoggedIn();
+            const { sessionCookie, apiKey } = await this.ensureLoggedIn();
 
             for (const grid of PADEL_GRIDS) {
                 console.log(`[Padel33] Fetching ${grid.name} on ${dateStr}...`);
 
-                const result = await page.evaluate(async ({ gridId, fecha, key, base }) => {
-                    const res = await fetch(`${base}/booking/srvc.aspx/ObtenerCuadro`, {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ idCuadro: gridId, fecha, key })
-                    });
-                    return await res.json();
-                }, { gridId: grid.id, fecha: dateStr, key: apiKey, base: MATCHPOINT_BASE });
+                const res = await axios.post(`${MATCHPOINT_BASE}/booking/srvc.aspx/ObtenerCuadro`, {
+                    idCuadro: grid.id,
+                    fecha: dateStr,
+                    key: apiKey
+                }, {
+                    headers: {
+                        'Cookie': sessionCookie,
+                        'Content-Type': 'application/json',
+                        'User-Agent': 'Mozilla/5.0'
+                    }
+                });
 
-                const gridData = result.d;
+                const gridData = res.data?.d;
 
                 if (!gridData?.TieneClienteAcceso || !gridData?.Columnas?.length) {
                     console.log(`[Padel33] ⚠️ ${grid.name}: no access or no courts`);
@@ -131,7 +150,7 @@ export class Padel33Scraper implements BookingProvider {
                             bookingUrl: grid.bookingUrl,
                             courtName,
                             availableCourts: 1,
-                            indoor: true,
+                            indoor: true, // Typical assumption built earlier
                         });
                         gridSlotCount++;
                     }
@@ -144,17 +163,13 @@ export class Padel33Scraper implements BookingProvider {
             // Reset session on error
             this.apiKey = null;
             this.lastLoginTime = 0;
+            this.sessionCookie = null;
         }
 
         return slots;
     }
 
     async close() {
-        if (this.browser) {
-            await this.browser.close();
-            this.browser = null;
-            this.page = null;
-            this.apiKey = null;
-        }
+        // Nothing to close for Axios
     }
 }

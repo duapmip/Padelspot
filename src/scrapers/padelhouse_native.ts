@@ -1,9 +1,5 @@
-/**
- * Padel House - Native Gestion Sports API Scraper
- * Handles authentication via Playwright and fetches slots directly from Gestion Sports API
- */
+import axios from 'axios';
 import { BookingProvider, Slot } from '../types/slot.js';
-import { chromium, Browser, Page } from 'playwright';
 
 const BASE_URL = 'https://padelhousefrance.gestion-sports.com';
 const EMAIL = 'astin.jotham@minuteafter.com';
@@ -13,70 +9,82 @@ const PADEL_SPORT_ID = 832;
 export class PadelHouseScraper implements BookingProvider {
     name = 'Padel House (Cenon)';
 
-    private browser: Browser | null = null;
     private userId: string | null = null;
     private xsrf: string | null = null;
-    private clubId: string | null = null;
-    private page: Page | null = null;
+    private clubId: string = '291';
+    private sessionCookie: string | null = null;
     private lastLoginTime = 0;
 
     private async ensureLoggedIn(): Promise<void> {
         const now = Date.now();
         // Re-login every 30 minutes
-        if (this.page && this.userId && this.xsrf && (now - this.lastLoginTime) < 30 * 60 * 1000) {
+        if (this.userId && this.xsrf && this.sessionCookie && (now - this.lastLoginTime) < 30 * 60 * 1000) {
             return;
         }
 
-        if (this.browser) {
-            try { await this.browser.close(); } catch { }
+        console.log('[PadelHouse] Logging into Gestion Sports via API...');
+
+        try {
+            // 1. Get initial session cookies
+            const initRes = await axios.get(`${BASE_URL}/connexion.php`, {
+                validateStatus: () => true
+            });
+            const initCookies = initRes.headers['set-cookie'] || [];
+            const initCookieStr = initCookies.map((c: string) => c.split(';')[0]).join('; ');
+
+            // 2. Perform Ajax Login
+            const params = new URLSearchParams();
+            params.append('ajax', 'connexionUser');
+            params.append('id_club', this.clubId);
+            params.append('email', EMAIL);
+            params.append('form_ajax', '1');
+            params.append('pass', PASSWORD);
+            params.append('compte', 'user');
+            params.append('playeridonesignal', '0');
+            params.append('identifiant', 'identifiant');
+            params.append('externCo', 'true');
+
+            const postRes = await axios.post(`${BASE_URL}/traitement/connexion.php`, params, {
+                headers: {
+                    'Cookie': initCookieStr,
+                    'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8',
+                    'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36',
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'Origin': BASE_URL,
+                    'Referer': `${BASE_URL}/connexion.php`
+                },
+                validateStatus: () => true
+            });
+
+            if (postRes.data?.status !== 'ok') {
+                throw new Error('[PadelHouse] API login failed: ' + JSON.stringify(postRes.data));
+            }
+
+            // 3. Extract tokens from cookies
+            const loginCookies = postRes.headers['set-cookie'] || [];
+            const allCookiesStr = [...initCookies, ...loginCookies].map((c: string) => c.split(';')[0]).join('; ');
+
+            const csrfTokenCookie = loginCookies.find((c: string) => c.startsWith('CSRF_TOKEN='));
+            if (csrfTokenCookie) this.xsrf = csrfTokenCookie.split(';')[0].split('=')[1];
+
+            const cookUserCookie = loginCookies.find((c: string) => c.startsWith('COOK_USER='));
+            if (cookUserCookie) {
+                const rawJson = decodeURIComponent(cookUserCookie.split(';')[0].split('=')[1]);
+                const parsed = JSON.parse(rawJson);
+                this.userId = parsed.idUser?.toString();
+            }
+
+            if (!this.userId || !this.xsrf) {
+                throw new Error('[PadelHouse] Failed to extract tokens from cookies');
+            }
+
+            this.sessionCookie = allCookiesStr;
+            this.lastLoginTime = now;
+            console.log('[PadelHouse] ✅ Logged in successfully via API');
+        } catch (error: any) {
+            console.error('[PadelHouse] Login error:', error.message);
+            throw error;
         }
-
-        console.log('[PadelHouse] Logging into Gestion Sports...');
-        this.browser = await chromium.launch({ headless: true });
-        const context = await this.browser.newContext({
-            userAgent: 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36'
-        });
-        this.page = await context.newPage();
-
-        await this.page.goto(`${BASE_URL}/connexion.php`, { waitUntil: 'networkidle' });
-
-        // Email
-        await this.page.fill('input[name="email"]', EMAIL);
-        await this.page.click('button:has-text("Connexion / Inscription")');
-        await this.page.waitForTimeout(2000);
-
-        // Password
-        await this.page.fill('input[name="pass"]', PASSWORD);
-        await pageClick(this.page, 'button.step-2_co, button:has-text("Se connecter")');
-        await this.page.waitForTimeout(5000);
-
-        // Handle possible "Session active" or welcome modals
-        if (await this.page.isVisible('button:has-text("Continuer")')) {
-            await this.page.click('button:has-text("Continuer")');
-            await this.page.waitForTimeout(3000);
-        }
-
-        // Navigate to Reservation to ensure tokens are in storage
-        await this.page.goto(`${BASE_URL}/appli/Reservation`, { waitUntil: 'networkidle' });
-        await this.page.waitForTimeout(5000);
-
-        const tokens = await this.page.evaluate(() => {
-            return {
-                userId: localStorage.getItem('idUser'),
-                clubId: localStorage.getItem('idClub'),
-                xsrf: localStorage.getItem('csrf_token'),
-            };
-        });
-
-        if (!tokens.userId || !tokens.xsrf) {
-            throw new Error('[PadelHouse] Login failed or tokens not found');
-        }
-
-        this.userId = tokens.userId;
-        this.clubId = tokens.clubId || '291';
-        this.xsrf = tokens.xsrf;
-        this.lastLoginTime = now;
-        console.log('[PadelHouse] ✅ Logged in successfully');
     }
 
     async fetchSlots(date: Date): Promise<Slot[]> {
@@ -85,34 +93,29 @@ export class PadelHouseScraper implements BookingProvider {
 
         try {
             await this.ensureLoggedIn();
-            if (!this.page) return [];
 
             console.log(`[PadelHouse] Fetching slots for ${dateStr}...`);
 
-            const result = await this.page.evaluate(async ({ dateStr, userId, clubId, xsrf, sportId }) => {
-                const res = await fetch('/gs-api', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'X-XSRF-TOKEN': xsrf,
-                        'X-USER-ID': userId,
-                        'X-CLUB-ID': clubId
-                    },
-                    body: JSON.stringify({
-                        event: "reservationManager.getAvailableSlotsForDay",
-                        args: {
-                            day: dateStr,
-                            idSport: sportId,
-                            subjectUserId: parseInt(userId),
-                            targetClubId: parseInt(clubId)
-                        }
-                    })
-                });
-                return await res.json();
-            }, { dateStr, userId: this.userId!, clubId: this.clubId!, xsrf: this.xsrf!, sportId: PADEL_SPORT_ID });
+            const res = await axios.post(`${BASE_URL}/gs-api`, {
+                event: "reservationManager.getAvailableSlotsForDay",
+                args: {
+                    day: dateStr,
+                    idSport: PADEL_SPORT_ID,
+                    subjectUserId: parseInt(this.userId!),
+                    targetClubId: parseInt(this.clubId)
+                }
+            }, {
+                headers: {
+                    'Cookie': this.sessionCookie,
+                    'Content-Type': 'application/json',
+                    'X-XSRF-TOKEN': this.xsrf!,
+                    'X-USER-ID': this.userId!,
+                    'X-CLUB-ID': this.clubId
+                }
+            });
 
             // The API returns an object where keys are court IDs
-            const courtsData = result;
+            const courtsData = res.data;
             if (!courtsData || typeof courtsData !== 'object' || courtsData.error) {
                 console.error('[PadelHouse] API error or no data');
                 return [];
@@ -157,16 +160,7 @@ export class PadelHouseScraper implements BookingProvider {
     }
 
     async close() {
-        if (this.browser) {
-            await this.browser.close();
-            this.browser = null;
-            this.page = null;
-        }
+        // Nothing to close for Axios
     }
 }
 
-async function pageClick(page: Page, selector: string) {
-    const el = page.locator(selector).first();
-    await el.waitFor({ state: 'visible' });
-    await el.click();
-}
