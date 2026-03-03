@@ -563,6 +563,12 @@ body {
     border-right: 1px solid rgba(0, 0, 0, 0.05);
     position: relative;
     z-index: 100;
+    transition: width 0.3s cubic-bezier(0.16, 1, 0.3, 1), border-right 0.3s;
+}
+
+.dp-left.full-width-desktop {
+    width: 100%;
+    border-right: none;
 }
 
 .dp-sticky-header {
@@ -872,6 +878,10 @@ body {
     }
 
     .dp-right.hide-on-mobile {
+        display: none !important;
+    }
+
+    .desktop-map-toggle {
         display: none !important;
     }
 

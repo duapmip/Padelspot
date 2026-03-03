@@ -1027,9 +1027,9 @@ export default function VariantB() {
             // Prepare for expansion
             setExpandedDays(prev => ({ ...prev, [dateKey]: '19:00' }));
             setSelections(prev => [...prev, { dayIndex: absIndex, hour: 19, minute: 0 }].sort((a, b) => a.dayIndex - b.dayIndex));
-            
+
             setTimeout(() => {
-                 document.getElementById('day-section-' + dateKey)?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                document.getElementById('day-section-' + dateKey)?.scrollIntoView({ behavior: 'smooth', block: 'center' });
             }, 300);
         }
     };
@@ -1374,7 +1374,7 @@ export default function VariantB() {
 
                 {view === 'results' && (
                     <motion.div key="results" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="dp-results-layout">
-                        <div className={`dp-left ${isMobileMapView ? 'hide-on-mobile' : ''}`}>
+                        <div className={`dp-left ${isMobileMapView ? 'hide-on-mobile' : ''} ${!showMap ? 'full-width-desktop' : ''}`}>
                             <div className="dp-sticky-header">
                                 <div className="results-header-top-row" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.25rem' }}>
                                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontWeight: 950, fontSize: '1.35rem', textTransform: 'uppercase', cursor: 'pointer', flexShrink: 0 }} onClick={() => setView('home')}>
@@ -1432,25 +1432,27 @@ export default function VariantB() {
 
                                         <div style={{ width: 1, height: 20, background: '#eee', margin: '0 0.25rem' }} />
 
-                                        <button
-                                            className="desktop-map-toggle"
-                                            onClick={() => setShowMap(!showMap)}
-                                            style={{
-                                                background: showMap ? 'var(--pitch-black)' : '#fff',
-                                                color: showMap ? '#fff' : 'inherit',
-                                                border: '1px solid rgba(0,0,0,0.1)',
-                                                borderRadius: '999px',
-                                                padding: '0.5rem 1.25rem',
-                                                fontSize: '0.75rem',
-                                                fontWeight: 900,
-                                                cursor: 'pointer',
-                                                display: 'flex',
-                                                alignItems: 'center',
-                                                gap: '0.3rem'
-                                            }}
-                                        >
-                                            <MapPin size={12} /> {showMap ? 'Masquer' : 'Carte'}
-                                        </button>
+                                        {!showMap && (
+                                            <button
+                                                className="desktop-map-toggle"
+                                                onClick={() => setShowMap(true)}
+                                                style={{
+                                                    background: '#fff',
+                                                    color: 'inherit',
+                                                    border: '1px solid rgba(0,0,0,0.1)',
+                                                    borderRadius: '999px',
+                                                    padding: '0.5rem 1.25rem',
+                                                    fontSize: '0.75rem',
+                                                    fontWeight: 900,
+                                                    cursor: 'pointer',
+                                                    display: 'flex',
+                                                    alignItems: 'center',
+                                                    gap: '0.3rem'
+                                                }}
+                                            >
+                                                <MapPin size={12} /> Carte
+                                            </button>
+                                        )}
                                     </div>
                                 </div>
 
@@ -1633,6 +1635,17 @@ export default function VariantB() {
                                         );
                                     })}
                                 </MapContainer>
+                                <div style={{ position: 'absolute', top: '1.5rem', right: '1.5rem', zIndex: 1000 }}>
+                                    <button
+                                        className="desktop-map-toggle"
+                                        onClick={() => setShowMap(false)}
+                                        style={{
+                                            background: 'var(--pitch-black)', color: '#fff', border: 'none', padding: '0.75rem 1.5rem', borderRadius: '999px', fontWeight: 900, fontSize: '0.75rem', display: 'flex', alignItems: 'center', gap: '0.5rem', boxShadow: '0 10px 30px rgba(0,0,0,0.2)', cursor: 'pointer'
+                                        }}
+                                    >
+                                        <X size={14} /> MASQUER LA CARTE
+                                    </button>
+                                </div>
                             </div>
                         )}
 
