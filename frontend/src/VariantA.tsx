@@ -33,7 +33,13 @@ const bordeauxCoordinates: Record<string, [number, number]> = {
     'UCPA Sport Station Bordeaux': [44.8624, -0.5484],
     'Padel 33': [44.8519, -0.5750],
     'Squashbad33 Bordeaux Nord': [44.8519, -0.5750],
-    'US Cenon Tennis': [44.8620, -0.5120]
+    'US Cenon Tennis': [44.8620, -0.5120],
+    'THE PADEL (Bègles)': [44.7973, -0.5297],
+    'Buenavista Padel Club': [44.7746, -0.3523],
+    'Tennis Club de Bordeaux': [44.8371, -0.5960],
+    'USTCT Talence': [44.8020, -0.5915],
+    'MY PADEL (Ayguemorte)': [44.6684, -0.2974],
+    'Ginga Stadium': [44.8181, -0.6780],
 };
 
 

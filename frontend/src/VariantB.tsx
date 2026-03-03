@@ -3,7 +3,7 @@ import { format, parseISO, addDays, startOfToday } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { ArrowRight, Zap, Filter, X, ChevronLeft, ChevronRight, Plus, MapPin, Calendar, Users, CheckCircle2, UserPlus, Share2, Check } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { MapContainer, TileLayer, Marker } from 'react-leaflet';
+import { MapContainer, TileLayer, Marker, useMap } from 'react-leaflet';
 import L from 'leaflet';
 import gsap from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
@@ -51,9 +51,26 @@ const bordeauxCoordinates: Record<string, [number, number]> = {
     'Big Padel': [44.82874, -0.6793],
     '4PADEL': [44.8911, -0.5448],
     'UCPA Sport Station': [44.8624, -0.5484],
-    'Padel 33': [44.8964, -0.6358], // Bruges, Rue de la Rivière
-    'Squashbad33': [44.88893, -0.54437]
+    'Padel 33': [44.8519, -0.5750],
+    'Squashbad33': [44.88893, -0.54437],
+    'THE PADEL': [44.7973, -0.5297],
+    'Buenavista': [44.7746, -0.3523],
+    'Tennis Club de Bordeaux': [44.8371, -0.5960],
+    'USTCT Talence': [44.8020, -0.5915],
+    'MY PADEL': [44.6684, -0.2974],
 };
+
+// Auto-fit map bounds to visible club markers
+function MapAutoFit({ clusters }: { clusters: { lat: number; lng: number }[] }) {
+    const map = useMap();
+    useEffect(() => {
+        if (clusters.length === 0) return;
+        const bounds = L.latLngBounds(clusters.map(c => [c.lat, c.lng] as [number, number]));
+        // If only 1 club, keep a general Bordeaux-level view (maxZoom 13)
+        map.fitBounds(bounds, { padding: [60, 60], maxZoom: 13, animate: true });
+    }, [clusters, map]);
+    return null;
+}
 
 // --- HELPER COMPONENTS ---
 
@@ -1590,6 +1607,7 @@ export default function VariantB() {
                             <div className={`dp-right ${!isMobileMapView ? 'hide-on-mobile' : ''}`}>
                                 <MapContainer center={[44.86, -0.58]} zoom={12} className="variant-b-leaflet" zoomControl={false} style={{ height: '100%', width: '100%' }}>
                                     <TileLayer url="https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png" />
+                                    <MapAutoFit clusters={clubClusters} />
                                     {clubClusters.map((cluster: any) => {
                                         const isSelected = cluster.slots.some((s: Slot) => selectedSlots.includes(s.id));
 
@@ -1624,6 +1642,14 @@ export default function VariantB() {
                                                             if (name.includes('big')) return 'BIG PADEL';
                                                             if (name.includes('padel 33')) return 'PADEL 33';
                                                             if (name.includes('4padel')) return '4PADEL';
+                                                            if (name.includes('ucpa')) return 'UCPA';
+                                                            if (name.includes('the padel')) return 'THE PADEL';
+                                                            if (name.includes('buenavista')) return 'BUENAVISTA';
+                                                            if (name.includes('ginga')) return 'GINGA';
+                                                            if (name.includes('tennis club')) return 'TC BORDEAUX';
+                                                            if (name.includes('ustct')) return 'USTCT';
+                                                            if (name.includes('my padel')) return 'MY PADEL';
+                                                            if (name.includes('3d')) return '3D PADEL';
                                                             return cluster.centerName.split(' ')[0].toUpperCase();
                                                         })()}
                                                         </div>
