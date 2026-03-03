@@ -1,7 +1,6 @@
 import axios from 'axios';
 import { format } from 'date-fns';
 import { Slot, BookingProvider } from '../types/slot.js';
-import * as cheerio from 'cheerio';
 
 export class TennisLibreScraper implements BookingProvider {
     name = 'Tennis Club de Bordeaux';
@@ -16,83 +15,106 @@ export class TennisLibreScraper implements BookingProvider {
             const response = await axios.get(url, {
                 headers: {
                     'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36'
+                },
+                responseType: 'arraybuffer' // TennisLibre uses Latin-1 encoding
+            });
+
+            // Decode as latin-1 since the site uses ISO-8859-1
+            const html = Buffer.from(response.data).toString('latin1');
+
+            // 1. Find all terrain labels to identify Padel columns
+            const labelRegex = /terrain_label/g;
+            const labelPositions: number[] = [];
+            let match: RegExpExecArray | null;
+            while ((match = labelRegex.exec(html)) !== null) {
+                labelPositions.push(match.index);
+            }
+
+            // Extract terrain names from <b> tags inside terrain_label cells
+            const terrainNames: string[] = [];
+            const nameRegex = /terrain_label[^>]*>[\s\S]*?<b>([\s\S]*?)<\/b>/g;
+            while ((match = nameRegex.exec(html)) !== null) {
+                terrainNames.push(match[1].trim());
+            }
+
+            // Find padel court indices
+            const padelCourts: { index: number; name: string }[] = [];
+            terrainNames.forEach((name, idx) => {
+                if (name.toLowerCase().includes('padel')) {
+                    padelCourts.push({ index: idx, name });
                 }
             });
 
-            const $ = cheerio.load(response.data);
+            if (padelCourts.length === 0) {
+                console.log(`[TennisLibre] No padel courts found at ${this.name}`);
+                return [];
+            }
 
-            // On cherche les colonnes qui contiennent "Padel"
-            // Dans TennisLibre, chaque terrain est une colonne dans un tableau complexe.
-            // On va chercher les headers pour identifier les index des colonnes Padel.
-            const padelColumnIndexes: { index: number, name: string }[] = [];
-            $('.terrain_label b').each((i, el) => {
-                const text = $(el).text().trim();
-                if (text.toLowerCase().includes('padel')) {
-                    padelColumnIndexes.push({ index: i, name: text });
+            // 2. For each padel court, extract the HTML section and parse reservations
+            for (const court of padelCourts) {
+                const sectionStart = labelPositions[court.index];
+                const sectionEnd = court.index + 1 < labelPositions.length
+                    ? labelPositions[court.index + 1]
+                    : html.length;
+                const section = html.substring(sectionStart, sectionEnd);
+
+                // Strip HTML tags for text analysis
+                const textCells = section.match(/<td[^>]*>([\s\S]*?)<\/td>/g) || [];
+                const cellTexts = textCells.map(cell =>
+                    cell.replace(/<[^>]+>/g, '').trim()
+                ).filter(t => t.length > 0);
+
+                // 3. Extract reservation time ranges (format: "12h30-13h30" or "18h-20h")
+                const reservations: { start: number; end: number }[] = [];
+                for (const text of cellTexts) {
+                    const timeMatch = text.match(/(\d{1,2})h(\d{2})?\s*-\s*(\d{1,2})h(\d{2})?/);
+                    if (timeMatch) {
+                        const startH = parseInt(timeMatch[1]) + parseInt(timeMatch[2] || '0') / 60;
+                        const endH = parseInt(timeMatch[3]) + parseInt(timeMatch[4] || '0') / 60;
+                        reservations.push({ start: startH, end: endH });
+                    }
                 }
-            });
 
-            // TennisLibre utilise un système de positionnement absolu en pixels ou des lignes de table.
-            // D'après mes recherches, il y a des liens "Réserver" pour les créneaux libres.
-            // Cependant, souvent le planning public montre juste les réservations existantes.
-            // Si une case est vide entre deux horaires, elle est libre.
+                // 4. Generate potential 90-min slots and check availability against reservations
+                const potentialStarts = [8, 9.5, 11, 12.5, 14, 15.5, 17, 18.5, 20];
 
-            // Stratégie simplifiée : TennisLibre affiche des blocs de réservation.
-            // On va générer des créneaux de 90min par défaut et vérifier s'ils chevauchent des réservations.
+                for (const ps of potentialStarts) {
+                    const pe = ps + 1.5; // 90 minutes
 
-            for (const court of padelColumnIndexes) {
-                // On récupère toutes les réservations de cette colonne
-                const reservations: { start: number, end: number }[] = [];
-                // Dans TennisLibre, les réservations sont dans des div avec des positions calculées.
-                // Au lieu de parser les pixels complexes, on va chercher les textes d'horaires s'ils existent.
+                    // Check overlap with any reservation
+                    const isOccupied = reservations.some(r => ps < r.end && pe > r.start);
 
-                // Si on ne peut pas parser les réservations facilement, on va chercher les liens "Réserver"
-                // qui apparaissent parfois sur les créneaux libres.
+                    if (!isOccupied) {
+                        const startTime = new Date(date);
+                        startTime.setHours(Math.floor(ps), (ps % 1) * 60, 0, 0);
+                        const endTime = new Date(startTime.getTime() + 90 * 60 * 1000);
 
-                // ALTERNATIVE : TennisLibre est assez vieux jeu. La plupart des créneaux
-                // de 8h à 22h sont réservables par tranches de 1h ou 1h30.
+                        // Skip slots in the past
+                        if (startTime <= new Date()) continue;
 
-                const daySlots = this.generatePotentialSlots(date);
-
-                for (const slot of daySlots) {
-                    // TODO: Pour un scraping parfait, il faudrait vérifier si le slot est occupé dans l'HTML.
-                    // Pour l'instant on va dire qu'ils sont disponibles si on ne trouve pas de bloc "occupé"
-                    // à cet horaire précis (le parsing TennisLibre est l'un des plus durs sans Playwright).
-
-                    slots.push({
-                        id: `tennislibre-${this.clubId}-${slot.start.getTime()}-${court.name}`,
-                        provider: 'tennislibre',
-                        centerName: this.name,
-                        startTime: slot.start,
-                        endTime: slot.end,
-                        durationMinutes: 90,
-                        price: 20, // Prix indicatif TC Bordeaux
-                        currency: 'EUR',
-                        bookingUrl: `https://www.tennislibre.com/tennis/front/view/viewday.php?idclub=${this.clubId}`,
-                        courtName: court.name,
-                        availableCourts: 1,
-                        indoor: false,
-                    });
+                        slots.push({
+                            id: `tennislibre-${this.clubId}-${startTime.getTime()}-${court.name}`,
+                            provider: 'tennislibre',
+                            centerName: this.name,
+                            startTime,
+                            endTime,
+                            durationMinutes: 90,
+                            price: 36, // TCB standard non-member rate for padel
+                            currency: 'EUR',
+                            bookingUrl: `https://www.tennislibre.com/tennis/front/view/viewday.php?idclub=${this.clubId}&dateday=${dateday}`,
+                            courtName: court.name,
+                            availableCourts: 1,
+                            indoor: false,
+                        });
+                    }
                 }
             }
 
-            console.log(`[TennisLibre] ✅ Generated ${slots.length} potential slots for ${this.name}`);
+            console.log(`[TennisLibre] ✅ ${slots.length} REAL available padel slots for ${this.name} on ${dateday}`);
         } catch (error: any) {
             console.error(`[TennisLibre] Error: ${error.message}`);
         }
 
         return slots;
-    }
-
-    private generatePotentialSlots(date: Date) {
-        const potential = [];
-        const hours = [9, 10.5, 12, 13.5, 15, 16.5, 18, 19.5, 21];
-        for (const h of hours) {
-            const start = new Date(date);
-            start.setHours(Math.floor(h), (h % 1) * 60, 0, 0);
-            const end = new Date(start.getTime() + 90 * 60 * 1000);
-            potential.push({ start, end });
-        }
-        return potential;
     }
 }

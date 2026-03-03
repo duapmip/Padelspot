@@ -130,20 +130,25 @@ export class GestionSportsScraper implements BookingProvider {
                     for (const duration of slotRaw.durations) {
                         const endTime = new Date(startTime.getTime() + duration * 60000);
 
-                        // Price calculation (approximate/default for Gestion Sports clubs)
-                        // This can be refined per club if needed
-                        let price = 48; // Default off-peak for 90min
+                        // Price calculation based on known club rates
+                        // GS API does not return prices, so we use best-known rates
+                        let price: number | null = null;
+                        const hour = startTime.getHours();
+                        const dayOfWeek = startTime.getDay();
+                        const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
+                        const isPeak = hour >= 18 || isWeekend;
+
                         if (this.name.includes('House')) {
-                            const dayOfWeek = startTime.getDay();
-                            const hour = startTime.getHours();
-                            if ((dayOfWeek >= 1 && dayOfWeek <= 5 && hour >= 18) || (duration === 90 && dayOfWeek === 0)) {
-                                price = 60;
-                            }
-                        } else if (this.name.includes('My Padel')) {
-                            price = 32; // Approx for My Padel Ayguemorte
+                            // Padel House Cenon: 48€ off-peak, 60€ peak (90min)
+                            price = isPeak ? 60 : 48;
+                        } else if (this.name.includes('MY PADEL') || this.name.includes('My Padel')) {
+                            // MY PADEL Ayguemorte: 32€ off-peak, 40€ peak (90min)
+                            price = isPeak ? 40 : 32;
+                        } else {
+                            price = 48; // Fallback
                         }
 
-                        if (duration === 60) price = (price / 1.5);
+                        if (duration === 60 && price !== null) price = Math.round(price / 1.5);
 
                         slots.push({
                             id: `gs-${this.config.clubId}-${courtId}-${startTime.getTime()}-${duration}`,
@@ -157,7 +162,7 @@ export class GestionSportsScraper implements BookingProvider {
                             bookingUrl: `${this.config.baseUrl}/appli/Reservation`,
                             courtName: court.name,
                             availableCourts: 1,
-                            indoor: court.type === 'indoor' || true,
+                            indoor: court.type === 'indoor',
                         });
                     }
                 }
