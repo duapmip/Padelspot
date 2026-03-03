@@ -1,3 +1,7 @@
+// Force timezone to Paris — all clubs are in France.
+// Without this, Render (UTC) shifts all slot times by +1h.
+process.env.TZ = 'Europe/Paris';
+
 import express from 'express';
 import cors from 'cors';
 import { SlotAggregator } from './aggregator.js';
