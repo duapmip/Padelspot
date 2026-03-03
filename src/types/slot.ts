@@ -1,6 +1,6 @@
 export interface Slot {
     id: string; // Unique ID for our system
-    provider: 'doinsport' | 'resamania' | 'headesh' | 'matchpoint' | 'anybuddy' | 'livexperience' | 'gestion-sports' | 'ucpa';
+    provider: 'doinsport' | 'resamania' | 'headesh' | 'matchpoint' | 'anybuddy' | 'livexperience' | 'gestion-sports' | 'ucpa' | 'ballejaune' | 'tennislibre';
     centerName: string;
     startTime: Date;
     endTime: Date;
