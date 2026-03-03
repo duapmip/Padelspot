@@ -99,7 +99,7 @@ export class TennisLibreScraper implements BookingProvider {
                             startTime,
                             endTime,
                             durationMinutes: 90,
-                            price: 36, // TCB standard non-member rate for padel
+                            price: 42, // TCB: 7€/h/person × 4 players × 1.5h = 42€ (non-member)
                             currency: 'EUR',
                             bookingUrl: `https://www.tennislibre.com/tennis/front/view/viewday.php?idclub=${this.clubId}&dateday=${dateday}`,
                             courtName: court.name,

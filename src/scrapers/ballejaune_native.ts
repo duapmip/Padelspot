@@ -78,7 +78,7 @@ export class BalleJauneScraper implements BookingProvider {
                         startTime,
                         endTime,
                         durationMinutes,
-                        price: 32, // USTCT standard rate (not provided by API)
+                        price: 48, // USTCT standard rate (48€/90min)
                         currency: 'EUR',
                         bookingUrl: `https://ballejaune.com/club/ustct`,
                         courtName,

@@ -142,8 +142,10 @@ export class GestionSportsScraper implements BookingProvider {
                             // Padel House Cenon: 48€ off-peak, 60€ peak (90min)
                             price = isPeak ? 60 : 48;
                         } else if (this.name.includes('MY PADEL') || this.name.includes('My Padel')) {
-                            // MY PADEL Ayguemorte: 32€ off-peak, 40€ peak (90min)
-                            price = isPeak ? 40 : 32;
+                            // MY PADEL Ayguemorte: 42€ off-peak, 60€ peak (90min)
+                            // Peak = 12h-14h & 16h30-22h30 weekdays, 09h-17h weekends
+                            const isPeakMyPadel = isWeekend || (hour >= 12 && hour < 14) || (hour >= 16);
+                            price = isPeakMyPadel ? 60 : 42;
                         } else {
                             price = 48; // Fallback
                         }
