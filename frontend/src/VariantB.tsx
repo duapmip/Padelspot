@@ -756,6 +756,7 @@ export default function VariantB() {
     const [slots, setSlots] = useState<Slot[]>([]);
     const [selectedSlots, setSelectedSlots] = useState<string[]>([]);
     const [isMobileMapView, setIsMobileMapView] = useState(false);
+    const [showMap, setShowMap] = useState(true);
     const [externalBookingSlot, setExternalBookingSlot] = useState<Slot | null>(null);
     const [isSticky, setIsSticky] = useState(false);
 
@@ -1026,6 +1027,10 @@ export default function VariantB() {
             // Prepare for expansion
             setExpandedDays(prev => ({ ...prev, [dateKey]: '19:00' }));
             setSelections(prev => [...prev, { dayIndex: absIndex, hour: 19, minute: 0 }].sort((a, b) => a.dayIndex - b.dayIndex));
+            
+            setTimeout(() => {
+                 document.getElementById('day-section-' + dateKey)?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }, 300);
         }
     };
 
@@ -1424,6 +1429,28 @@ export default function VariantB() {
                                         >
                                             <Users size={12} /> {matchTypeFilter === '1v1' ? 'Solo (1v1)' : 'Double (2v2)'}
                                         </button>
+
+                                        <div style={{ width: 1, height: 20, background: '#eee', margin: '0 0.25rem' }} />
+
+                                        <button
+                                            className="desktop-map-toggle"
+                                            onClick={() => setShowMap(!showMap)}
+                                            style={{
+                                                background: showMap ? 'var(--pitch-black)' : '#fff',
+                                                color: showMap ? '#fff' : 'inherit',
+                                                border: '1px solid rgba(0,0,0,0.1)',
+                                                borderRadius: '999px',
+                                                padding: '0.5rem 1.25rem',
+                                                fontSize: '0.75rem',
+                                                fontWeight: 900,
+                                                cursor: 'pointer',
+                                                display: 'flex',
+                                                alignItems: 'center',
+                                                gap: '0.3rem'
+                                            }}
+                                        >
+                                            <MapPin size={12} /> {showMap ? 'Masquer' : 'Carte'}
+                                        </button>
                                     </div>
                                 </div>
 
@@ -1498,7 +1525,7 @@ export default function VariantB() {
 
                             <div className="dp-results-scroll">
                                 {dailyGroups.map(day => (
-                                    <div key={day.date} className="dp-day-section" style={{ marginBottom: '2.5rem' }}>
+                                    <div key={day.date} id={`day-section-${day.date}`} className="dp-day-section" style={{ marginBottom: '2.5rem' }}>
                                         <div className="dp-day-header" style={{ fontFamily: 'var(--font-ui)', fontSize: '0.75rem', textTransform: 'uppercase', color: 'var(--pitch-black)', fontWeight: 900, marginBottom: '0.4rem', letterSpacing: '0.05em' }}>{format(parseISO(day.date), 'EEEE d MMMM', { locale: fr })}</div>
                                         {renderTimelineDaySlots(day)}
 
@@ -1557,58 +1584,57 @@ export default function VariantB() {
                             )}
                         </div>
 
-                        <div className={`dp-right ${!isMobileMapView ? 'hide-on-mobile' : ''}`}>
-                            <MapContainer center={[44.86, -0.58]} zoom={12} className="variant-b-leaflet" zoomControl={false} style={{ height: '100%', width: '100%' }}>
-                                <TileLayer url="https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png" />
-                                {clubClusters.map((cluster: any) => {
-                                    const isSelected = cluster.slots.some((s: Slot) => selectedSlots.includes(s.id));
+                        {showMap && (
+                            <div className={`dp-right ${!isMobileMapView ? 'hide-on-mobile' : ''}`}>
+                                <MapContainer center={[44.86, -0.58]} zoom={12} className="variant-b-leaflet" zoomControl={false} style={{ height: '100%', width: '100%' }}>
+                                    <TileLayer url="https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png" />
+                                    {clubClusters.map((cluster: any) => {
+                                        const isSelected = cluster.slots.some((s: Slot) => selectedSlots.includes(s.id));
 
-                                    return (
-                                        <Marker
-                                            key={cluster.centerName}
-                                            position={[cluster.lat, cluster.lng]}
-                                            icon={L.divIcon({
-                                                className: `variant-b-map-club-bubble`,
-                                                html: `
-                                                    <div style="
-                                                        background: ${isSelected ? 'var(--sun-blaze)' : '#fff'}; 
-                                                        color: ${isSelected ? '#fff' : 'var(--pitch-black)'};
-                                                        border: 2px solid ${isSelected ? 'var(--sun-blaze)' : 'var(--pitch-black)'}; 
-                                                        padding: 6px 14px; 
-                                                        border-radius: 99px; 
-                                                        font-weight: 950; 
-                                                        font-size: 11px; 
-                                                        box-shadow: 0 10px 25px rgba(0,0,0,0.15);
-                                                        transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
-                                                        transform: scale(${isSelected ? 1.1 : 1});
-                                                        white-space: nowrap;
-                                                        width: fit-content;
-                                                        display: flex;
-                                                        align-items: center;
-                                                        justify-content: center;
-                                                    ">
-                                                        ${(() => {
-                                                        const name = cluster.centerName.toLowerCase();
-                                                        if (name.includes('house')) return 'PADEL HOUSE';
-                                                        if (name.includes('mb')) return 'MB PADEL';
-                                                        if (name.includes('big')) return 'BIG PADEL';
-                                                        if (name.includes('padel 33')) return 'PADEL 33';
-                                                        if (name.includes('4padel')) return '4PADEL';
-                                                        return cluster.centerName.split(' ')[0].toUpperCase();
-                                                    })()}
-                                                    </div>
-                                                `,
-                                                iconSize: [120, 30],
-                                                iconAnchor: [60, 15],
-                                            })}
-                                        />
-                                    );
-                                })}
-                            </MapContainer>
-                            <div style={{ position: 'absolute', top: '1.5rem', right: '1.5rem', zIndex: 1000, background: '#fff', padding: '0.75rem 1.5rem', borderRadius: '999px', border: '2px solid var(--pitch-black)', fontWeight: 900, fontSize: '0.8rem', display: 'flex', alignItems: 'center', gap: '0.5rem', boxShadow: '0 10px 30px rgba(0,0,0,0.1)' }}>
-                                <Zap size={16} fill="var(--sun-blaze)" stroke="none" /> MB PADEL & 11 AUTRES
+                                        return (
+                                            <Marker
+                                                key={cluster.centerName}
+                                                position={[cluster.lat, cluster.lng]}
+                                                icon={L.divIcon({
+                                                    className: `variant-b-map-club-bubble`,
+                                                    html: `
+                                                        <div style="
+                                                            background: ${isSelected ? 'var(--sun-blaze)' : '#fff'}; 
+                                                            color: ${isSelected ? '#fff' : 'var(--pitch-black)'};
+                                                            border: 2px solid ${isSelected ? 'var(--sun-blaze)' : 'var(--pitch-black)'}; 
+                                                            padding: 6px 14px; 
+                                                            border-radius: 99px; 
+                                                            font-weight: 950; 
+                                                            font-size: 11px; 
+                                                            box-shadow: 0 10px 25px rgba(0,0,0,0.15);
+                                                            transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+                                                            transform: scale(${isSelected ? 1.1 : 1});
+                                                            white-space: nowrap;
+                                                            width: fit-content;
+                                                            display: flex;
+                                                            align-items: center;
+                                                            justify-content: center;
+                                                        ">
+                                                            ${(() => {
+                                                            const name = cluster.centerName.toLowerCase();
+                                                            if (name.includes('house')) return 'PADEL HOUSE';
+                                                            if (name.includes('mb')) return 'MB PADEL';
+                                                            if (name.includes('big')) return 'BIG PADEL';
+                                                            if (name.includes('padel 33')) return 'PADEL 33';
+                                                            if (name.includes('4padel')) return '4PADEL';
+                                                            return cluster.centerName.split(' ')[0].toUpperCase();
+                                                        })()}
+                                                        </div>
+                                                    `,
+                                                    iconSize: [120, 30],
+                                                    iconAnchor: [60, 15],
+                                                })}
+                                            />
+                                        );
+                                    })}
+                                </MapContainer>
                             </div>
-                        </div>
+                        )}
 
                         {/* Mobile Map/List Toggle FAB */}
                         <div className="mobile-map-toggle">
