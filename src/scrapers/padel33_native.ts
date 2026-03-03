@@ -102,7 +102,11 @@ export class Padel33Scraper implements BookingProvider {
             const { sessionCookie, apiKey } = await this.ensureLoggedIn();
 
             for (const grid of PADEL_GRIDS) {
-                console.log(`[Padel33] Fetching ${grid.name} on ${dateStr}...`);
+                console.log(`[Padel33] Fetching ${grid.name} on ${dateStr}... (delaying slightly to mimic human behavior)`);
+
+                // Wait between 1 and 2.5 seconds to avoid flooding the API and getting banned
+                const delayMs = Math.floor(Math.random() * 1500) + 1000;
+                await new Promise(resolve => setTimeout(resolve, delayMs));
 
                 const res = await axios.post(`${MATCHPOINT_BASE}/booking/srvc.aspx/ObtenerCuadro`, {
                     idCuadro: grid.id,
