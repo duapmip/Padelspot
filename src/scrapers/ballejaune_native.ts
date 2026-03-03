@@ -10,16 +10,17 @@ export class BalleJauneScraper implements BookingProvider {
 
     async fetchSlots(date: Date): Promise<Slot[]> {
         const slots: Slot[] = [];
-        // BalleJaune uses date as an offset from today (0 = today, 1 = tomorrow, etc.)
-        // But the integrated planning also accepts a YYYY-MM-DD format in some cases 
-        // Or we calculate the offset.
+
+        // BalleJaune uses day offset from today (0 = today, 1 = tomorrow, etc.)
         const today = new Date();
         today.setHours(0, 0, 0, 0);
         const targetDate = new Date(date);
         targetDate.setHours(0, 0, 0, 0);
 
-        const diffTime = Math.abs(targetDate.getTime() - today.getTime());
-        const dayOffset = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+        const diffTime = targetDate.getTime() - today.getTime();
+        const dayOffset = Math.round(diffTime / (1000 * 60 * 60 * 24));
+
+        if (dayOffset < 0) return []; // Skip past dates
 
         const url = `https://ballejaune.com/plannings-integrated`;
 
@@ -39,31 +40,36 @@ export class BalleJauneScraper implements BookingProvider {
 
             const $ = cheerio.load(response.data);
 
-            // Each court is a table with class schedule-table-slots
+            // BalleJaune structure:
+            // .schedule-container contains one court
+            //   .media-body.text-ellipsis contains the court name (e.g. "PADEL N°1")
+            //   .slot-free elements are bookable slots with data-timestart (minutes from midnight) and data-duration
             $('.schedule-container').each((_, container) => {
-                const courtName = $(container).find('.schedule-table-header .title .name').text().trim();
+                // Get the court name from the header
+                const courtName = $(container).find('.media-body.text-ellipsis').first().text().trim();
 
-                // We only want Padel courts
+                // Only keep Padel courts
                 if (!courtName.toLowerCase().includes('padel')) return;
 
+                // Find all free slots in this court
                 $(container).find('.slot-free').each((_, slotEl) => {
-                    const timeRange = $(slotEl).find('.time').text().trim(); // e.g. "09:00 - 10:30"
-                    if (!timeRange) return;
+                    const $slot = $(slotEl);
+                    const timeStartMinutes = parseInt($slot.attr('data-timestart') || '0');
+                    const durationMinutes = parseInt($slot.attr('data-duration') || '90');
 
-                    const [startStr, endStr] = timeRange.split(' - ');
+                    if (timeStartMinutes === 0) return;
+
+                    // Convert minutes from midnight to hours/minutes
+                    const startH = Math.floor(timeStartMinutes / 60);
+                    const startM = timeStartMinutes % 60;
+
                     const startTime = new Date(date);
-                    const [startH, startM] = startStr.split(':').map(Number);
                     startTime.setHours(startH, startM, 0, 0);
 
-                    const endTime = new Date(date);
-                    const [endH, endM] = endStr.split(':').map(Number);
-                    endTime.setHours(endH, endM, 0, 0);
+                    const endTime = new Date(startTime.getTime() + durationMinutes * 60 * 1000);
 
-                    const durationMinutes = (endTime.getTime() - startTime.getTime()) / (1000 * 60);
-
-                    // Price is usually not public on the widget for non-members
-                    // Let's use a default price for Talence (approx 32-40€ for 1h30)
-                    const price = 32;
+                    // Skip slots in the past
+                    if (startTime <= new Date()) return;
 
                     slots.push({
                         id: `ballejaune-${this.clubId}-${startTime.getTime()}-${courtName}`,
@@ -72,12 +78,12 @@ export class BalleJauneScraper implements BookingProvider {
                         startTime,
                         endTime,
                         durationMinutes,
-                        price,
+                        price: 32, // USTCT standard rate (not provided by API)
                         currency: 'EUR',
                         bookingUrl: `https://ballejaune.com/club/ustct`,
                         courtName,
                         availableCourts: 1,
-                        indoor: courtName.toLowerCase().includes('couvert') || true,
+                        indoor: false, // USTCT padel courts are outdoor
                     });
                 });
             });
