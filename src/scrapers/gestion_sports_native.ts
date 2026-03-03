@@ -1,0 +1,174 @@
+import axios from 'axios';
+import { BookingProvider, Slot } from '../types/slot.js';
+
+interface GestionSportsClub {
+    name: string;
+    baseUrl: string;
+    clubId: string;
+    sportId: number;
+    email: string;
+    pass: string;
+}
+
+export class GestionSportsScraper implements BookingProvider {
+    name: string;
+    private config: GestionSportsClub;
+
+    // Shared state per instance (or per club)
+    private userId: string | null = null;
+    private xsrf: string | null = null;
+    private sessionCookie: string | null = null;
+    private lastLoginTime = 0;
+
+    constructor(config: GestionSportsClub) {
+        this.name = config.name;
+        this.config = config;
+    }
+
+    private async ensureLoggedIn(): Promise<void> {
+        const now = Date.now();
+        if (this.userId && this.xsrf && this.sessionCookie && (now - this.lastLoginTime) < 30 * 60 * 1000) {
+            return;
+        }
+
+        console.log(`[GestionSports] Logging into ${this.name} (${this.config.baseUrl})...`);
+
+        try {
+            const initRes = await axios.get(`${this.config.baseUrl}/connexion.php`, {
+                validateStatus: () => true
+            });
+            const initCookies = initRes.headers['set-cookie'] || [];
+            const initCookieStr = initCookies.map((c: string) => c.split(';')[0]).join('; ');
+
+            const params = new URLSearchParams();
+            params.append('ajax', 'connexionUser');
+            params.append('id_club', this.config.clubId);
+            params.append('email', this.config.email);
+            params.append('form_ajax', '1');
+            params.append('pass', this.config.pass);
+            params.append('compte', 'user');
+            params.append('playeridonesignal', '0');
+            params.append('identifiant', 'identifiant');
+            params.append('externCo', 'true');
+
+            const postRes = await axios.post(`${this.config.baseUrl}/traitement/connexion.php`, params, {
+                headers: {
+                    'Cookie': initCookieStr,
+                    'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8',
+                    'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36',
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'Origin': this.config.baseUrl,
+                    'Referer': `${this.config.baseUrl}/connexion.php`
+                },
+                validateStatus: () => true
+            });
+
+            if (postRes.data?.status !== 'ok') {
+                throw new Error(`API login failed for ${this.name}: ` + JSON.stringify(postRes.data));
+            }
+
+            const loginCookies = postRes.headers['set-cookie'] || [];
+            const allCookiesStr = [...initCookies, ...loginCookies].map((c: string) => c.split(';')[0]).join('; ');
+
+            const csrfTokenCookie = loginCookies.find((c: string) => c.startsWith('CSRF_TOKEN='));
+            if (csrfTokenCookie) this.xsrf = csrfTokenCookie.split(';')[0].split('=')[1];
+
+            const cookUserCookie = loginCookies.find((c: string) => c.startsWith('COOK_USER='));
+            if (cookUserCookie) {
+                const rawJson = decodeURIComponent(cookUserCookie.split(';')[0].split('=')[1]);
+                const parsed = JSON.parse(rawJson);
+                this.userId = parsed.idUser?.toString();
+            }
+
+            if (!this.userId || !this.xsrf) {
+                throw new Error(`Failed to extract tokens from cookies for ${this.name}`);
+            }
+
+            this.sessionCookie = allCookiesStr;
+            this.lastLoginTime = now;
+            console.log(`[GestionSports] ✅ Logged in to ${this.name}`);
+        } catch (error: any) {
+            console.error(`[GestionSports] Login error for ${this.name}:`, error.message);
+            throw error;
+        }
+    }
+
+    async fetchSlots(date: Date): Promise<Slot[]> {
+        const slots: Slot[] = [];
+        const dateStr = date.toISOString().split('T')[0];
+
+        try {
+            await this.ensureLoggedIn();
+
+            const res = await axios.post(`${this.config.baseUrl}/gs-api`, {
+                event: "reservationManager.getAvailableSlotsForDay",
+                args: {
+                    day: dateStr,
+                    idSport: this.config.sportId,
+                    subjectUserId: parseInt(this.userId!),
+                    targetClubId: parseInt(this.config.clubId)
+                }
+            }, {
+                headers: {
+                    'Cookie': this.sessionCookie,
+                    'Content-Type': 'application/json',
+                    'X-XSRF-TOKEN': this.xsrf!,
+                    'X-USER-ID': this.userId!,
+                    'X-CLUB-ID': this.config.clubId
+                }
+            });
+
+            const courtsData = res.data;
+            if (!courtsData || typeof courtsData !== 'object' || courtsData.error) return [];
+
+            for (const courtId in courtsData) {
+                const court = courtsData[courtId];
+                if (!court.slotsAvailable) continue;
+
+                for (const slotRaw of court.slotsAvailable) {
+                    const startTime = new Date(slotRaw.dateTimeStart.replace(' ', 'T'));
+                    for (const duration of slotRaw.durations) {
+                        const endTime = new Date(startTime.getTime() + duration * 60000);
+
+                        // Price calculation (approximate/default for Gestion Sports clubs)
+                        // This can be refined per club if needed
+                        let price = 48; // Default off-peak for 90min
+                        if (this.name.includes('House')) {
+                            const dayOfWeek = startTime.getDay();
+                            const hour = startTime.getHours();
+                            if ((dayOfWeek >= 1 && dayOfWeek <= 5 && hour >= 18) || (duration === 90 && dayOfWeek === 0)) {
+                                price = 60;
+                            }
+                        } else if (this.name.includes('My Padel')) {
+                            price = 32; // Approx for My Padel Ayguemorte
+                        }
+
+                        if (duration === 60) price = (price / 1.5);
+
+                        slots.push({
+                            id: `gs-${this.config.clubId}-${courtId}-${startTime.getTime()}-${duration}`,
+                            provider: 'gestion-sports',
+                            centerName: this.name,
+                            startTime,
+                            endTime,
+                            durationMinutes: duration,
+                            price: Math.round(price),
+                            currency: 'EUR',
+                            bookingUrl: `${this.config.baseUrl}/appli/Reservation`,
+                            courtName: court.name,
+                            availableCourts: 1,
+                            indoor: court.type === 'indoor' || true,
+                        });
+                    }
+                }
+            }
+
+            console.log(`[GestionSports] ✅ ${slots.length} slots for ${this.name} on ${dateStr}`);
+        } catch (error: any) {
+            console.error(`[GestionSports] Fetch error for ${this.name}:`, error.message);
+            this.xsrf = null;
+        }
+
+        return slots;
+    }
+}

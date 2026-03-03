@@ -2,8 +2,8 @@ import axios from 'axios';
 import { BookingProvider, Slot } from '../types/slot.js';
 
 const MATCHPOINT_BASE = 'https://squashbad33-fr.matchpoint.com.es';
-const EMAIL = 'padelbot.scraper@gmail.com';
-const PASSWORD = 'PadelBot!2026';
+const EMAIL = process.env.PADEL33_EMAIL || 'padelbot.scraper@gmail.com';
+const PASSWORD = process.env.PADEL33_PASSWORD || 'PadelBot!2026';
 
 // Padel grids on MatchPoint  
 const PADEL_GRIDS = [

@@ -5,7 +5,11 @@ import { MBPadelScraper } from './scrapers/mbpadel.js';
 import { Padel33Scraper } from './scrapers/padel33_native.js';
 import { GingaStadiumScraper } from './scrapers/ginga.js';
 import { UCPAScraper } from './scrapers/ucpa_native.js';
-import { PadelHouseScraper } from './scrapers/padelhouse_native.js';
+import { GestionSportsScraper } from './scrapers/gestion_sports_native.js';
+import { BuenavistaPadelScraper } from './scrapers/buenavista.js';
+import { BalleJauneScraper } from './scrapers/ballejaune_native.js';
+import { TennisLibreScraper } from './scrapers/tennislibre_native.js';
+import { LiveXperienceScraper } from './scrapers/livexperience_native.js';
 
 import { format, addDays } from 'date-fns';
 import { supabase } from './supabase.js';
@@ -20,8 +24,47 @@ export class SlotAggregator {
         this.providers.push(new MBPadelScraper());         // Doinsport API
         this.providers.push(new GingaStadiumScraper());    // Doinsport API
         this.providers.push(new UCPAScraper());             // UCPA public API
-        this.providers.push(new PadelHouseScraper());      // Gestion Sports API
+
+        // --- Gestion Sports Clubs ---
+        const GS_CREDENTIALS = { email: 'astin.jotham@minuteafter.com', pass: 'Test123' }; // Should move to .env
+
+        this.providers.push(new GestionSportsScraper({
+            name: 'Padel House (Cenon)',
+            baseUrl: 'https://padelhousefrance.gestion-sports.com',
+            clubId: '291',
+            sportId: 832,
+            ...GS_CREDENTIALS
+        }));
+
+        this.providers.push(new GestionSportsScraper({
+            name: 'MY PADEL (Ayguemorte)',
+            baseUrl: 'https://mypadel.gestion-sports.com',
+            clubId: '149',
+            sportId: 832,
+            ...GS_CREDENTIALS
+        }));
+
+        // --- LiveXperience Clubs ---
+        const LX_CREDENTIALS = { email: 'rashod.yani@minuteafter.com', pass: 'Test123&' };
+
+        this.providers.push(new LiveXperienceScraper({
+            name: '3D Padel (Le Haillan)',
+            baseUrl: 'https://3dpadel.mymobileapp.fr',
+            clubId: '291',
+            ...LX_CREDENTIALS
+        }));
+
+        this.providers.push(new LiveXperienceScraper({
+            name: 'THE PADEL (Bègles)',
+            baseUrl: 'https://thepadel.mymobileapp.fr',
+            clubId: '320',
+            ...LX_CREDENTIALS
+        }));
+
         this.providers.push(new Padel33Scraper());         // MatchPoint API
+        this.providers.push(new BuenavistaPadelScraper());   // Doinsport API
+        this.providers.push(new BalleJauneScraper());       // BalleJaune API
+        this.providers.push(new TennisLibreScraper());      // TennisLibre API
 
         // Anybuddy fallback (4PADEL - clubs without native API)
         this.providers.push(new AnybuddyBordeauxScraper());
