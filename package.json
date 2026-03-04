@@ -7,7 +7,7 @@
     "test": "echo \"Error: no test specified\" && exit 1",
     "dev": "tsx watch src/server.ts",
     "start": "node dist/server.js",
-    "build": "npm install && tsc && cd frontend && npm install && npm run build",
+    "build": "npm install && tsc && cd padel-nextjs && npm install && npm run build",
     "test-sync": "tsx src/test_sync.ts"
   },
   "keywords": [],
