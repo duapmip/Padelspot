@@ -1,9 +1,16 @@
 'use client'
 
 import React from 'react'
-import { format, parseISO } from 'date-fns'
+import { format, parseISO, isValid } from 'date-fns'
 import { fr } from 'date-fns/locale'
 import { ThumbsUp, ThumbsDown, Check, Clock, MapPin } from 'lucide-react'
+
+// Helper to safely parse and validate dates
+const safeParseDate = (raw: any): Date | null => {
+    if (!raw) return null;
+    const date = typeof raw === 'string' ? parseISO(raw) : (raw instanceof Date ? raw : new Date(raw));
+    return isValid(date) ? date : null;
+};
 
 interface Voter {
     id: string;
@@ -21,8 +28,12 @@ interface PollSlotCardProps {
 export default function PollSlotCard({ slot, voters, currentUserName, onVote }: PollSlotCardProps) {
     // Check if slot.slot is nested (Supabase joined data)
     const actualSlot = slot.slot || slot;
-    const rawTime = actualSlot.start_time || actualSlot.startTime;
-    const startTime = typeof rawTime === 'string' ? parseISO(rawTime) : (rawTime instanceof Date ? rawTime : parseISO(String(rawTime || '')));
+    const startTime = safeParseDate(actualSlot.start_time || actualSlot.startTime);
+
+    if (!startTime) {
+        return null; // Don't render if date is invalid
+    }
+
     const day = format(startTime, 'EEEE d MMMM', { locale: fr });
     const time = format(startTime, 'HH:mm');
 

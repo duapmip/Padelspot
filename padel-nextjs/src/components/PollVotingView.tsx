@@ -5,7 +5,14 @@ import PollHeader from './PollHeader'
 import PollSlotCard from './PollSlotCard'
 import PollWhatsAppShare from './PollWhatsAppShare'
 import { castVote } from '@/app/poll/actions'
-import { format, parseISO } from 'date-fns'
+import { format, parseISO, isValid } from 'date-fns'
+
+// Helper to safely parse and validate dates
+const safeParseDate = (raw: any): Date | null => {
+    if (!raw) return null;
+    const date = typeof raw === 'string' ? parseISO(raw) : (raw instanceof Date ? raw : new Date(raw));
+    return isValid(date) ? date : null;
+};
 
 interface PollVotingViewProps {
     poll: any;
@@ -52,10 +59,8 @@ export default function PollVotingView({ poll, user, guestName }: PollVotingView
     // Calculate days with slots for the header
     const daysWithSlots = Array.from(new Set(poll.slots.map((s: any) => {
         const actualSlot = s.slot || s;
-        const rawTime = actualSlot.start_time || actualSlot.startTime;
-        if (!rawTime) return null;
-        const date = typeof rawTime === 'string' ? parseISO(rawTime) : rawTime;
-        return format(date, 'yyyy-MM-dd');
+        const date = safeParseDate(actualSlot.start_time || actualSlot.startTime);
+        return date ? format(date, 'yyyy-MM-dd') : null;
     }).filter(Boolean)));
 
     const votersCount = new Set(votes.filter((v: any) => v.vote_value).map((v: any) => v.user_name)).size;
@@ -80,9 +85,10 @@ export default function PollVotingView({ poll, user, guestName }: PollVotingView
                         {poll.slots.sort((a: any, b: any) => {
                             const sA = a.slot || a;
                             const sB = b.slot || b;
-                            const tA = sA.start_time || sA.startTime;
-                            const tB = sB.start_time || sB.startTime;
-                            return new Date(tA).getTime() - new Date(tB).getTime();
+                            const dA = safeParseDate(sA.start_time || sA.startTime);
+                            const dB = safeParseDate(sB.start_time || sB.startTime);
+                            if (!dA || !dB) return 0;
+                            return dA.getTime() - dB.getTime();
                         }).map((slot: any) => (
                             <PollSlotCard
                                 key={slot.id}
