@@ -824,7 +824,6 @@ export default function ClubBookingInterface({ user, initialPollId }: { user: Us
     }, [slots]);
 
     const [pollVotes, setPollVotes] = useState<any[]>([]);
-    const [voterName, setVoterName] = useState('');
 
     useEffect(() => {
         if (pollId && view === 'poll') {
