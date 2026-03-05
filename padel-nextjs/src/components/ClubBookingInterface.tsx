@@ -1125,8 +1125,9 @@ export default function ClubBookingInterface({ user, initialPollId }: { user: Us
                     const lastDate = ALL_DAYS[sorted[sorted.length - 1]?.dayIndex || 0].date;
                     const diff = Math.ceil((lastDate.getTime() - firstDate.getTime()) / (1000 * 60 * 60 * 24));
 
-                    const fetchStartStr = format(firstDate, "yyyy-MM-dd'T'00:00:00.000'Z'"); // Beginning of range
-                    const fetchEndStr = format(addDays(firstDate, Math.max(15, diff + 1)), "yyyy-MM-dd'T'23:59:59.999'Z'");
+                    const fetchToday = startOfToday();
+                    const fetchStartStr = fetchToday.toISOString();
+                    const fetchEndStr = addDays(fetchToday, 21).toISOString();
 
                     console.log(`Fetching from Supabase from ${fetchStartStr} to ${fetchEndStr}`);
 
@@ -1615,7 +1616,7 @@ export default function ClubBookingInterface({ user, initialPollId }: { user: Us
                                                     <div key={i} style={{ textAlign: 'center', fontSize: '0.65rem', fontWeight: 900, color: '#aaa', marginBottom: '2rem' }}>{dayStr}</div>
                                                 ))}
                                                 {Array.from({ length: parseISO(ALL_DAYS[0].key).getDay() === 0 ? 6 : parseISO(ALL_DAYS[0].key).getDay() - 1 }).map((_, i) => <div key={`empty-${i}`} />)}
-                                                {ALL_DAYS.slice(0, 14).map((day, i) => (
+                                                {ALL_DAYS.slice(0, 21).map((day, i) => (
                                                     <button
                                                         key={day.key}
                                                         onClick={() => { setSelections([{ dayIndex: i, hour: selections[0].hour, minute: selections[0].minute }]); setIsDatePickerOpen(false); }}

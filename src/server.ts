@@ -63,8 +63,7 @@ app.get('/api/slots', async (req, res) => {
         }
 
         const days = parseInt(req.query.days as string) || 1;
-        const maxDays = 7;
-        const safeDays = Math.min(Math.max(1, days), maxDays);
+        const safeDays = Math.min(Math.max(1, days), 15);
 
         console.log(`[API] Fetching slots for date: ${dateParam}, days: ${safeDays}`);
 

@@ -3,8 +3,8 @@ import { SlotAggregator } from './aggregator.js';
 async function testSync() {
     console.log('🚀 Starting Test Sync for all clubs...');
     const aggregator = new SlotAggregator();
-    // Scrape only 2 days to be fast but see tomorrow
-    await aggregator.runFullSync(2);
+    // Scrape 15 days to fill the database correctly
+    await aggregator.runFullSync(15);
     console.log('✨ Sync finished.');
     process.exit(0);
 }
