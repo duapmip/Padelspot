@@ -1883,8 +1883,8 @@ export default function ClubBookingInterface({ user, initialPollId }: { user: Us
                                                                     <X size={12} />
                                                                 </div>
                                                             )}
-                                                            <div style={{ fontSize: '0.7rem', fontWeight: 900, textTransform: 'uppercase', opacity: isSelected ? 0.8 : 0.6, letterSpacing: '0.05em', marginBottom: '2px', color: isSelected ? '#fff' : 'var(--pitch-black)' }}>{d.dayName.slice(0, 3)}</div>
-                                                            <div style={{ fontSize: '1.5rem', fontWeight: 950, lineHeight: 1, letterSpacing: '-0.02em', color: isSelected ? '#fff' : 'var(--pitch-black)' }}>{d.dateNum}</div>
+                                                            <div style={{ fontSize: '0.7rem', fontWeight: 900, textTransform: 'uppercase', opacity: isSelected ? 0.8 : 0.6, letterSpacing: '0.05em', marginBottom: '2px', color: isSelected && !isEditing ? '#fff' : 'var(--pitch-black)' }}>{d.dayName.slice(0, 3)}</div>
+                                                            <div style={{ fontSize: '1.5rem', fontWeight: 950, lineHeight: 1, letterSpacing: '-0.02em', color: isSelected && !isEditing ? '#fff' : 'var(--pitch-black)' }}>{d.dateNum}</div>
                                                             {isSelected && <div style={{ fontSize: '0.65rem', fontWeight: 950, marginTop: '6px', color: '#fff', opacity: 0.8 }}>{sel?.hour}H</div>}
                                                         </div>
 
