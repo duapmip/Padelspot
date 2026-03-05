@@ -66,22 +66,23 @@ export default function PollVotingView({ poll, user, guestName }: PollVotingView
     const votersCount = new Set(votes.filter((v: any) => v.vote_value).map((v: any) => v.user_name)).size;
 
     return (
-        <div className="min-h-screen bg-[#F8F9FB] pb-20 font-sans">
-            <div className="max-w-xl mx-auto bg-white shadow-2xl shadow-black/5 min-h-screen">
+        <div className="min-h-screen bg-slate-100 flex justify-center font-sans">
+            {/* Mobile Container */}
+            <div className="w-full max-w-[500px] bg-[#F8F9FB] shadow-2xl shadow-black/10 min-h-screen flex flex-col overflow-x-hidden relative">
                 <PollHeader
-                    title={`Match de ${poll.creator?.first_name || 'Anonyme'}`}
+                    title={`Match de ${poll.creator?.first_name || 'Organisateur'}`}
                     votersCount={votersCount}
                     targetCount={poll.target_voters_count || 4}
                     daysWithSlots={daysWithSlots as string[]}
                 />
 
-                <main className="mt-8">
-                    <div className="px-6 mb-4 flex items-center justify-between">
-                        <h2 className="text-xl font-black uppercase text-gray-900 leading-none">Options de jeu</h2>
-                        <span className="text-[10px] font-black uppercase text-black/20 tracking-tighter">Trie : Chronologique</span>
+                <main className="flex-1 px-4 py-8 pb-32">
+                    <div className="px-2 mb-8 flex items-center justify-between">
+                        <h2 className="text-xl font-black uppercase text-gray-900 leading-none tracking-tight underline decoration-orange-500 decoration-4 underline-offset-8">Options</h2>
+                        <span className="text-[10px] font-black uppercase text-black/20 tracking-widest">Chronologique</span>
                     </div>
 
-                    <section className="space-y-4">
+                    <div className="space-y-8">
                         {poll.slots.sort((a: any, b: any) => {
                             const sA = a.slot || a;
                             const sB = b.slot || b;
@@ -91,27 +92,28 @@ export default function PollVotingView({ poll, user, guestName }: PollVotingView
                             return dA.getTime() - dB.getTime();
                         }).map((slot: any) => (
                             <PollSlotCard
-                                key={slot.id}
+                                key={slot.id || (slot.slot?.id || slot.slot_id)}
                                 slot={slot}
                                 voters={votes.filter((v: any) => v.slot_id === (slot.slot?.id || slot.slot_id))}
                                 currentUserName={currentUserName}
                                 onVote={(isAvailable) => handleVoteAction(slot.slot?.id || slot.slot_id, isAvailable)}
                             />
                         ))}
-                    </section>
+                    </div>
 
-                    {/* Show Share only if user is the creator */}
                     {user?.id === poll.user_id && (
-                        <div className="mt-12">
+                        <div className="mt-16">
                             <PollWhatsAppShare pollId={poll.id} creatorName={currentUserName} />
                         </div>
                     )}
                 </main>
 
-                {/* Float Label for current user */}
-                <div className="fixed bottom-6 left-1/2 -translate-x-1/2 px-4 py-2 bg-black text-white rounded-full text-[10px] font-black uppercase shadow-xl tracking-widest flex items-center gap-2">
-                    <div className="w-2 h-2 rounded-full bg-green-400 animate-pulse" />
-                    Vote en tant que : {currentUserName || 'Visiteur'}
+                {/* Floating identity badge */}
+                <div className="sticky bottom-8 left-0 right-0 px-4 flex justify-center pointer-events-none z-50">
+                    <div className="px-6 py-3 bg-black text-white rounded-full text-[10px] font-black uppercase shadow-2xl tracking-[0.2em] flex items-center gap-3 border border-white/20 whitespace-nowrap pointer-events-auto">
+                        <div className="w-2.5 h-2.5 rounded-full bg-green-400 shadow-[0_0_10px_rgba(74,222,128,0.5)] animate-pulse" />
+                        Vote : {currentUserName || 'Visiteur'}
+                    </div>
                 </div>
             </div>
         </div>
