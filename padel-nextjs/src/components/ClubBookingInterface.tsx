@@ -2,12 +2,11 @@
 
 import { useState, useEffect, useMemo, useRef, useLayoutEffect } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { format, parseISO, addDays, startOfToday, eachDayOfInterval, isSameDay, startOfWeek, endOfWeek } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { ArrowRight, Zap, Filter, X, ChevronLeft, ChevronRight, ChevronUp, Plus, MapPin, Calendar, Users, CheckCircle2, UserPlus, Share2, Check, Lock, Heart, Trash2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import PollVotingView from './PollVotingView';
 import dynamic from 'next/dynamic';
 // Leaflet is loaded dynamically only client-side
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -789,6 +788,9 @@ function InteractiveGroupPollCard() {
 
 export default function ClubBookingInterface({ user, initialPollId }: { user: User | null, initialPollId?: string }) {
     const router = useRouter();
+    const searchParams = useSearchParams();
+    const guestNameParam = searchParams.get('guest');
+
     // --- STATE ---
     const [view, setView] = useState<'home' | 'results' | 'poll' | 'profile'>(initialPollId ? 'poll' : 'home');
     const [slots, setSlots] = useState<Slot[]>([]);
@@ -797,6 +799,8 @@ export default function ClubBookingInterface({ user, initialPollId }: { user: Us
     const [userStats, setUserStats] = useState({ matchesPlayed: 12, rating: 4.5, level: 'Intermédiaire' });
     const [userPolls, setUserPolls] = useState<any[]>([]);
     const [pollId, setPollId] = useState<string | null>(initialPollId || null);
+    const [pollCreatorName, setPollCreatorName] = useState<string>('');
+    const [voterName, setVoterName] = useState(guestNameParam || '');
     const [showAuthModal, setShowAuthModal] = useState(false);
     const [showSelectedModal, setShowSelectedModal] = useState(false);
     const [targetVoters, setTargetVoters] = useState(4);
@@ -833,7 +837,15 @@ export default function ClubBookingInterface({ user, initialPollId }: { user: Us
                     .single();
                 if (pollData) {
                     setTargetVoters(pollData.target_voters_count);
-                    setPollCreatorId(pollData.created_by);
+                    setPollCreatorId(pollData.created_by || pollData.user_id);
+
+                    // Fetch Creator Name
+                    const { data: creatorProf } = await supabase
+                        .from('profiles')
+                        .select('first_name')
+                        .eq('id', pollData.created_by || pollData.user_id)
+                        .single();
+                    if (creatorProf) setPollCreatorName(creatorProf.first_name || 'Un pote');
                 }
 
                 // 1. Fetch slots IDs for this poll
@@ -1404,7 +1416,7 @@ export default function ClubBookingInterface({ user, initialPollId }: { user: Us
     };
 
     const handleVote = async (slotId: string) => {
-        const name = user ? (profileFields.firstName || user.email?.split('@')?.[0]) : voterName;
+        const name = user ? (profileFields.firstName || user.email?.split('@')[0]) : voterName;
         if (!name) {
             alert("Merci de renseigner votre nom pour voter !");
             return;
@@ -2078,7 +2090,7 @@ export default function ClubBookingInterface({ user, initialPollId }: { user: Us
                                                             if (name.includes('ustct')) return 'USTCT';
                                                             if (name.includes('my padel')) return 'MY PADEL';
                                                             if (name.includes('3d')) return '3D PADEL';
-                                                            return (cluster.centerName || 'PADEL').split(' ')[0].toUpperCase();
+                                                            return cluster.centerName.split(' ')[0].toUpperCase();
                                                         })()}
                                                         </div>
                                                     `,
@@ -2112,20 +2124,255 @@ export default function ClubBookingInterface({ user, initialPollId }: { user: Us
                     </motion.div>
                 )}
 
-                {view === 'poll' && pollId && (
-                    <PollVotingView
-                        poll={{
-                            id: pollId,
-                            user_id: pollCreatorId,
-                            target_voters_count: targetVoters,
-                            slots: selectedSlots.map(id => ({ slot: slots.find(s => s.id === id) })),
-                            votes: pollVotes.map(v => ({ ...v, vote_value: v.vote_value ?? true })),
-                            creator: { first_name: pollCreatorId === user?.id ? (profileFields.firstName || 'Toi') : 'Organisateur' }
-                        }}
-                        user={user}
-                        guestName={voterName}
-                    />
+                {view === 'poll' && (
+                    <motion.div key="poll" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} style={{ padding: '0 0 5rem 0', background: '#FAFAFA', minHeight: '100vh' }}>
+                        {(() => {
+                            const isCreator = user?.id === pollCreatorId;
+                            const pSlots = selectedSlots.map(id => slots.find(s => s.id === id)).filter(Boolean) as any[];
+                            const sortedSlots = [...pSlots].sort((a, b) => a.startTime.getTime() - b.startTime.getTime());
+
+                            const uniqueVoters = Array.from(new Set(pollVotes.map(v => v.user_name)));
+                            const voterCount = uniqueVoters.length;
+                            const progress = Math.min((voterCount / targetVoters) * 100, 100);
+
+                            // Get days that have slots for the mini-calendar
+                            const slotsByDay = sortedSlots.reduce((acc: Record<string, any[]>, s) => {
+                                const dayKey = format(s.startTime, 'yyyy-MM-dd');
+                                if (!acc[dayKey]) acc[dayKey] = [];
+                                acc[dayKey].push(s);
+                                return acc;
+                            }, {});
+                            const activeDays = Object.keys(slotsByDay).sort();
+
+                            const handleQuickVote = async (slotId: string, isChaud: boolean) => {
+                                const name = user ? (profileFields.firstName || user.email?.split('@')[0]) : voterName;
+                                if (!name) {
+                                    const entry = prompt("Ton prénom / Surnom pour voter :");
+                                    if (!entry) return;
+                                    setVoterName(entry);
+                                    // Recurse once with the new name
+                                    setTimeout(() => handleQuickVote(slotId, isChaud), 100);
+                                    return;
+                                }
+
+                                const existing = pollVotes.find(v => v.slot_id === slotId && v.user_name === name);
+                                if (isChaud) {
+                                    if (!existing) {
+                                        const newVote = { poll_id: pollId, slot_id: slotId, user_name: name };
+                                        const { data, error } = await supabase.from('poll_votes').insert(newVote).select().single();
+                                        if (!error && data) setPollVotes(prev => [...prev, data]);
+                                    }
+                                } else {
+                                    if (existing) {
+                                        setPollVotes(prev => prev.filter(v => v.id !== existing.id));
+                                        await supabase.from('poll_votes').delete().eq('id', existing.id);
+                                    }
+                                }
+                            };
+
+                            const scrollToDay = (dayKey: string) => {
+                                document.getElementById(`poll-day-${dayKey}`)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                            };
+
+                            return (
+                                <>
+                                    {/* STICKY HEADER */}
+                                    <div style={{ position: 'sticky', top: 0, zIndex: 1000, background: '#fff', boxShadow: '0 4px 20px rgba(0,0,0,0.05)', padding: '0.75rem 0' }}>
+                                        <div style={{ maxWidth: 600, margin: '0 auto', padding: '0 1.25rem' }}>
+                                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem' }}>
+                                                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                                    <div style={{ width: 32, height: 32, borderRadius: '50%', background: 'var(--sun-blaze)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.8rem', fontWeight: 950, color: '#fff' }}>
+                                                        {pollCreatorName[0]?.toUpperCase() || 'P'}
+                                                    </div>
+                                                    <div>
+                                                        <div style={{ fontSize: '0.7rem', fontWeight: 800, opacity: 0.5, textTransform: 'uppercase' }}>Match de</div>
+                                                        <div style={{ fontSize: '1rem', fontWeight: 950 }}>{pollCreatorName || 'Un pote'}</div>
+                                                    </div>
+                                                </div>
+                                                <div style={{ textAlign: 'right' }}>
+                                                    <div style={{ fontSize: '0.85rem', fontWeight: 950, color: voterCount >= targetVoters ? '#00C853' : 'var(--sun-blaze)' }}>
+                                                        {voterCount >= targetVoters ? 'MATCH COMPLET ! 🎾' : `Pénurie : ${targetVoters - voterCount} joueur${targetVoters - voterCount > 1 ? 's' : ''}`}
+                                                    </div>
+                                                    <div style={{ width: 100, height: 6, background: 'rgba(0,0,0,0.05)', borderRadius: 3, marginTop: 4, overflow: 'hidden', marginLeft: 'auto' }}>
+                                                        <motion.div initial={{ width: 0 }} animate={{ width: `${progress}%` }} style={{ height: '100%', background: voterCount >= targetVoters ? '#00C853' : 'var(--sun-blaze)' }} />
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            {/* MINI CALENDAR */}
+                                            <div style={{ display: 'flex', gap: '0.5rem', overflowX: 'auto', padding: '0.5rem 0', scrollbarWidth: 'none' }}>
+                                                {['L', 'M', 'M', 'J', 'V', 'S', 'D'].map((dayChar, i) => {
+                                                    // This is a bit simplified for the display
+                                                    // Map these to the days in the poll if possible
+                                                    return (
+                                                        <div key={i} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px' }}>
+                                                            <div style={{ fontSize: '0.65rem', fontWeight: 900, opacity: 0.3 }}>{dayChar}</div>
+                                                            <div style={{ width: 4, height: 4, borderRadius: '50%', background: 'rgba(255,107,0,0.2)' }} />
+                                                        </div>
+                                                    );
+                                                })}
+                                            </div>
+
+                                            {/* ACTIVE DAYS JUMP */}
+                                            <div style={{ display: 'flex', gap: '0.75rem', overflowX: 'auto', padding: '0.5rem 0', scrollbarWidth: 'none' }}>
+                                                {activeDays.map(dayKey => (
+                                                    <button
+                                                        key={dayKey}
+                                                        onClick={() => scrollToDay(dayKey)}
+                                                        style={{ background: 'rgba(0,0,0,0.04)', border: 'none', padding: '0.4rem 0.8rem', borderRadius: '99px', fontSize: '0.65rem', fontWeight: 900, whiteSpace: 'nowrap', color: 'var(--pitch-black)' }}
+                                                    >
+                                                        {format(parseISO(dayKey), 'eee d MMM', { locale: fr }).toUpperCase()}
+                                                    </button>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div style={{ maxWidth: 600, margin: '2rem auto', padding: '0 1.25rem' }}>
+                                        {Object.entries(slotsByDay).map(([dayKey, daySlots]: [string, any]) => (
+                                            <div key={dayKey} id={`poll-day-${dayKey}`} style={{ marginBottom: '2.5rem' }}>
+                                                <div style={{ fontSize: '0.75rem', fontWeight: 950, textTransform: 'uppercase', color: 'rgba(0,0,0,0.3)', marginBottom: '1rem', letterSpacing: '0.05em' }}>
+                                                    {format(parseISO(dayKey), 'EEEE d MMMM', { locale: fr })}
+                                                </div>
+
+                                                <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                                                    {daySlots.map((slot: any) => {
+                                                        const votes = pollVotes.filter(v => v.slot_id === slot.id);
+                                                        const name = user ? (profileFields.firstName || user.email?.split('@')[0]) : voterName;
+                                                        const hasVoted = votes.some(v => v.user_name === name);
+
+                                                        return (
+                                                            <div key={slot.id} style={{ background: '#fff', borderRadius: '1.75rem', padding: '1.5rem', boxShadow: '0 10px 30px rgba(0,0,0,0.03)', border: '1px solid rgba(0,0,0,0.02)' }}>
+                                                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1.25rem' }}>
+                                                                    <div>
+                                                                        <div style={{ fontSize: '2rem', fontWeight: 950, letterSpacing: '-0.03em', lineHeight: 1 }}>{format(slot.startTime, 'HH:mm')}</div>
+                                                                        <div style={{ fontSize: '0.85rem', fontWeight: 700, opacity: 0.6, marginTop: '0.25rem' }}>{slot.centerName} · {slot.durationMinutes} min</div>
+                                                                        <div style={{ fontSize: '0.8rem', fontWeight: 900, color: 'var(--sun-blaze)', marginTop: '0.4rem' }}>{slot.price}€ / joueur</div>
+                                                                    </div>
+                                                                    <div style={{ display: 'flex', alignItems: 'center' }}>
+                                                                        {votes.slice(0, 4).map((v, i) => (
+                                                                            <div key={i} style={{
+                                                                                width: 34, height: 34, borderRadius: '50%',
+                                                                                background: `hsl(${(i * 137) % 360}, 70%, 50%)`,
+                                                                                border: '3px solid #fff',
+                                                                                marginLeft: i === 0 ? 0 : -12,
+                                                                                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                                                                color: '#fff', fontSize: '0.7rem', fontWeight: 950,
+                                                                                boxShadow: '0 4px 8px rgba(0,0,0,0.05)',
+                                                                                zIndex: 10 - i
+                                                                            }}>
+                                                                                {v.user_name[0].toUpperCase()}
+                                                                            </div>
+                                                                        ))}
+                                                                        {votes.length > 4 && (
+                                                                            <div style={{ width: 34, height: 34, borderRadius: '50%', background: 'rgba(0,0,0,0.05)', border: '3px solid #fff', marginLeft: -12, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.7rem', fontWeight: 950, color: 'rgba(0,0,0,0.4)', zIndex: 0 }}>
+                                                                                +{votes.length - 4}
+                                                                            </div>
+                                                                        )}
+                                                                        {votes.length === 0 && <div style={{ fontSize: '0.7rem', fontWeight: 800, opacity: 0.2, textTransform: 'uppercase' }}>Aucun vote</div>}
+                                                                    </div>
+                                                                </div>
+
+                                                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
+                                                                    <button
+                                                                        onClick={() => handleQuickVote(slot.id, true)}
+                                                                        style={{
+                                                                            background: hasVoted ? 'var(--sun-blaze)' : 'rgba(0,0,0,0.03)',
+                                                                            color: hasVoted ? '#fff' : 'var(--pitch-black)',
+                                                                            border: 'none',
+                                                                            padding: '1rem',
+                                                                            borderRadius: '1.25rem',
+                                                                            fontWeight: 950,
+                                                                            fontSize: '0.85rem',
+                                                                            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem',
+                                                                            cursor: 'pointer',
+                                                                            transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
+                                                                            transform: hasVoted ? 'scale(1.02)' : 'scale(1)',
+                                                                            boxShadow: hasVoted ? '0 10px 20px rgba(255,107,0,0.15)' : 'none'
+                                                                        }}
+                                                                    >
+                                                                        <Check size={18} strokeWidth={3} /> CHAUD
+                                                                    </button>
+                                                                    <button
+                                                                        onClick={() => handleQuickVote(slot.id, false)}
+                                                                        style={{
+                                                                            background: 'rgba(0,0,0,0.03)',
+                                                                            color: 'rgba(0,0,0,0.3)',
+                                                                            border: 'none',
+                                                                            padding: '1rem',
+                                                                            borderRadius: '1.25rem',
+                                                                            fontWeight: 950,
+                                                                            fontSize: '0.85rem',
+                                                                            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem',
+                                                                            cursor: 'pointer'
+                                                                        }}
+                                                                    >
+                                                                        <X size={18} strokeWidth={3} /> PAS DISPO
+                                                                    </button>
+                                                                </div>
+                                                            </div>
+                                                        );
+                                                    })}
+                                                </div>
+                                            </div>
+                                        ))}
+
+                                        {/* SHARE BANNER */}
+                                        <div style={{ background: 'var(--pitch-black)', borderRadius: '2rem', padding: '2.5rem', marginTop: '4rem', color: '#fff', textAlign: 'center' }}>
+                                            <div style={{ fontSize: '1.25rem', fontWeight: 950, marginBottom: '0.5rem' }}>Invite tes potes ! 🎾</div>
+                                            <p style={{ fontSize: '0.85rem', opacity: 0.6, marginBottom: '1.5rem' }}>Partage ce lien sur WhatsApp pour remplir le match rapidement.</p>
+
+                                            <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem', alignItems: 'center' }}>
+                                                <button
+                                                    onClick={() => {
+                                                        const url = `${window.location.origin}/poll/${pollId}`;
+                                                        navigator.clipboard.writeText(url);
+                                                        alert("Lien copié !");
+                                                    }}
+                                                    style={{ background: 'var(--sun-blaze)', color: '#fff', border: 'none', padding: '1rem 2rem', borderRadius: '1.25rem', fontWeight: 950, fontSize: '0.9rem', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.6rem' }}
+                                                >
+                                                    <Share2 size={18} /> COPIER LE LIEN GÉNÉRAL
+                                                </button>
+
+                                                {isCreator && friends.length > 0 && (
+                                                    <div style={{ width: '100%', borderTop: '1px solid rgba(255,255,255,0.1)', paddingTop: '1.5rem' }}>
+                                                        <div style={{ fontSize: '0.65rem', fontWeight: 900, opacity: 0.4, textTransform: 'uppercase', marginBottom: '1rem', letterSpacing: '0.1em' }}>Envoyer un lien magique à :</div>
+                                                        <div style={{ display: 'flex', gap: '0.6rem', flexWrap: 'wrap', justifyContent: 'center' }}>
+                                                            {friends.map(f => (
+                                                                <button
+                                                                    key={f.id}
+                                                                    onClick={() => {
+                                                                        const baseUrl = `${window.location.origin}/poll/${pollId}`;
+                                                                        const magicUrl = `${baseUrl}?guest=${encodeURIComponent(f.friend_name)}`;
+                                                                        const text = `Salut ${f.friend_name} ! On organise un Padel. Vote pour tes dispos ici : ${magicUrl}`;
+                                                                        window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, '_blank');
+                                                                    }}
+                                                                    style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', padding: '0.6rem 1.2rem', borderRadius: '1rem', fontSize: '0.75rem', fontWeight: 900, color: '#fff', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.4rem' }}
+                                                                >
+                                                                    <Zap size={12} fill="var(--sun-blaze)" stroke="none" /> {f.friend_name}
+                                                                </button>
+                                                            ))}
+                                                        </div>
+                                                    </div>
+                                                )}
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    {!user && (
+                                        <div style={{ maxWidth: 600, margin: '4rem auto', padding: '0 1.25rem', textAlign: 'center' }}>
+                                            <h3 style={{ fontSize: '1.5rem', fontWeight: 950, marginBottom: '1rem' }}>Tu joues souvent ?</h3>
+                                            <button onClick={() => router.push('/login')} style={{ background: 'rgba(0,0,0,0.05)', color: 'var(--pitch-black)', border: 'none', padding: '1rem 2rem', borderRadius: '1.25rem', fontWeight: 950, cursor: 'pointer' }}>CRÉER UN COMPTE</button>
+                                        </div>
+                                    )}
+                                </>
+                            );
+                        })()}
+                    </motion.div>
                 )}
+
+
+
                 {view === 'profile' && (
                     <motion.div key="profile" initial={{ opacity: 0 }} animate={{ opacity: 1 }} style={{ background: 'var(--off-white-clay)', minHeight: '100vh', padding: '0 0 5rem 0' }}>
                         {/* UNIFIED HEADER BAR */}

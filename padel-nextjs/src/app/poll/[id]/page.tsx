@@ -1,33 +1,14 @@
+import ClubBookingInterface from '@/components/ClubBookingInterface';
 import { createClient } from '@/utils/supabase/server';
-import { getPollData } from '@/app/poll/actions';
-import PollVotingView from '@/components/PollVotingView';
-import { notFound } from 'next/navigation';
 
-export default async function PollPage({
-    params,
-    searchParams
-}: {
-    params: Promise<{ id: string }>,
-    searchParams: Promise<{ guest?: string }>
-}) {
+export default async function PollPage(props: { params: Promise<{ id: string }> }) {
+    const params = await props.params;
     const supabase = await createClient();
     const { data: { user } } = await supabase.auth.getUser();
 
-    const resolvedParams = await params;
-    const resolvedSearchParams = await searchParams;
-
-    // Fetch full poll data with slots and existing votes
-    const poll = await getPollData(resolvedParams.id);
-
-    if (!poll) {
-        return notFound();
-    }
-
     return (
-        <PollVotingView
-            poll={poll}
-            user={user}
-            guestName={resolvedSearchParams.guest}
-        />
+        <div style={{ width: '100vw', minHeight: '100vh', overflowX: 'hidden' }}>
+            <ClubBookingInterface user={user} initialPollId={params.id} />
+        </div>
     );
 }
