@@ -1,7 +1,7 @@
 import axios from 'axios';
 const MATCHPOINT_BASE = 'https://squashbad33-fr.matchpoint.com.es';
-const EMAIL = 'padelbot.scraper@gmail.com';
-const PASSWORD = 'PadelBot!2026';
+const EMAIL = process.env.PADEL33_EMAIL || 'padelbot.scraper@gmail.com';
+const PASSWORD = process.env.PADEL33_PASSWORD || 'PadelBot!2026';
 // Padel grids on MatchPoint  
 const PADEL_GRIDS = [
     { id: 5, name: 'Padel 33 Bordeaux', bookingUrl: 'https://www.padel33.fr' },
@@ -85,7 +85,10 @@ export class Padel33Scraper {
         try {
             const { sessionCookie, apiKey } = await this.ensureLoggedIn();
             for (const grid of PADEL_GRIDS) {
-                console.log(`[Padel33] Fetching ${grid.name} on ${dateStr}...`);
+                console.log(`[Padel33] Fetching ${grid.name} on ${dateStr}... (delaying slightly to mimic human behavior)`);
+                // Wait between 1 and 2.5 seconds to avoid flooding the API and getting banned
+                const delayMs = Math.floor(Math.random() * 1500) + 1000;
+                await new Promise(resolve => setTimeout(resolve, delayMs));
                 const res = await axios.post(`${MATCHPOINT_BASE}/booking/srvc.aspx/ObtenerCuadro`, {
                     idCuadro: grid.id,
                     fecha: dateStr,
@@ -114,14 +117,34 @@ export class Padel33Scraper {
                         const endTime = new Date(slot.FechaHoraFin?.match(/\d+/)?.[0] * 1);
                         if (isNaN(startTime.getTime()))
                             continue;
+                        const durationMinutes = slot.Minutos || 90;
+                        // Padel 33 Pricing (based on 4 pax)
+                        // Off-peak: 4€/pax/30min (48€ per 90m court). Mon-Fri 10:30-12:00 & 14:00-17:00
+                        // Peak: 5€/pax/30min (60€ per 90m court). Mon-Fri 12-14h, 17h-closing, and weekends all day
+                        let price = 60; // Default to Peak 
+                        const dayOfWeek = startTime.getDay();
+                        const hour = startTime.getHours();
+                        const minute = startTime.getMinutes();
+                        const timeInMins = hour * 60 + minute;
+                        if (dayOfWeek >= 1 && dayOfWeek <= 5) {
+                            // Weekday
+                            // Off-peak 10:30 (630) to 12:00 (720) AND 14:00 (840) to 17:00 (1020)
+                            if ((timeInMins >= 630 && timeInMins < 720) || (timeInMins >= 840 && timeInMins < 1020)) {
+                                price = 48;
+                            }
+                        }
+                        // Adjust if not exactly 90 mins (API sometimes outputs 60 or 120)
+                        if (durationMinutes !== 90) {
+                            price = (price / 90) * durationMinutes;
+                        }
                         slots.push({
                             id: `padel33-${grid.id}-${court.Id}-${slot.Id}`,
                             provider: 'matchpoint',
                             centerName: grid.name,
                             startTime,
                             endTime,
-                            durationMinutes: slot.Minutos || 90,
-                            price: 0, // MatchPoint doesn't expose price in the API
+                            durationMinutes,
+                            price,
                             currency: 'EUR',
                             bookingUrl: grid.bookingUrl,
                             courtName,

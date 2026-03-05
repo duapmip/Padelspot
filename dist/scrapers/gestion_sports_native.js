@@ -1,55 +1,52 @@
 import axios from 'axios';
-const BASE_URL = 'https://padelhousefrance.gestion-sports.com';
-const EMAIL = 'astin.jotham@minuteafter.com';
-const PASSWORD = 'Test123';
-const PADEL_SPORT_ID = 832;
-export class PadelHouseScraper {
-    name = 'Padel House (Cenon)';
+export class GestionSportsScraper {
+    name;
+    config;
+    // Shared state per instance (or per club)
     userId = null;
     xsrf = null;
-    clubId = '291';
     sessionCookie = null;
     lastLoginTime = 0;
+    constructor(config) {
+        this.name = config.name;
+        this.config = config;
+    }
     async ensureLoggedIn() {
         const now = Date.now();
-        // Re-login every 30 minutes
         if (this.userId && this.xsrf && this.sessionCookie && (now - this.lastLoginTime) < 30 * 60 * 1000) {
             return;
         }
-        console.log('[PadelHouse] Logging into Gestion Sports via API...');
+        console.log(`[GestionSports] Logging into ${this.name} (${this.config.baseUrl})...`);
         try {
-            // 1. Get initial session cookies
-            const initRes = await axios.get(`${BASE_URL}/connexion.php`, {
+            const initRes = await axios.get(`${this.config.baseUrl}/connexion.php`, {
                 validateStatus: () => true
             });
             const initCookies = initRes.headers['set-cookie'] || [];
             const initCookieStr = initCookies.map((c) => c.split(';')[0]).join('; ');
-            // 2. Perform Ajax Login
             const params = new URLSearchParams();
             params.append('ajax', 'connexionUser');
-            params.append('id_club', this.clubId);
-            params.append('email', EMAIL);
+            params.append('id_club', this.config.clubId);
+            params.append('email', this.config.email);
             params.append('form_ajax', '1');
-            params.append('pass', PASSWORD);
+            params.append('pass', this.config.pass);
             params.append('compte', 'user');
             params.append('playeridonesignal', '0');
             params.append('identifiant', 'identifiant');
             params.append('externCo', 'true');
-            const postRes = await axios.post(`${BASE_URL}/traitement/connexion.php`, params, {
+            const postRes = await axios.post(`${this.config.baseUrl}/traitement/connexion.php`, params, {
                 headers: {
                     'Cookie': initCookieStr,
                     'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8',
                     'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36',
                     'X-Requested-With': 'XMLHttpRequest',
-                    'Origin': BASE_URL,
-                    'Referer': `${BASE_URL}/connexion.php`
+                    'Origin': this.config.baseUrl,
+                    'Referer': `${this.config.baseUrl}/connexion.php`
                 },
                 validateStatus: () => true
             });
             if (postRes.data?.status !== 'ok') {
-                throw new Error('[PadelHouse] API login failed: ' + JSON.stringify(postRes.data));
+                throw new Error(`API login failed for ${this.name}: ` + JSON.stringify(postRes.data));
             }
-            // 3. Extract tokens from cookies
             const loginCookies = postRes.headers['set-cookie'] || [];
             const allCookiesStr = [...initCookies, ...loginCookies].map((c) => c.split(';')[0]).join('; ');
             const csrfTokenCookie = loginCookies.find((c) => c.startsWith('CSRF_TOKEN='));
@@ -62,14 +59,14 @@ export class PadelHouseScraper {
                 this.userId = parsed.idUser?.toString();
             }
             if (!this.userId || !this.xsrf) {
-                throw new Error('[PadelHouse] Failed to extract tokens from cookies');
+                throw new Error(`Failed to extract tokens from cookies for ${this.name}`);
             }
             this.sessionCookie = allCookiesStr;
             this.lastLoginTime = now;
-            console.log('[PadelHouse] ✅ Logged in successfully via API');
+            console.log(`[GestionSports] ✅ Logged in to ${this.name}`);
         }
         catch (error) {
-            console.error('[PadelHouse] Login error:', error.message);
+            console.error(`[GestionSports] Login error for ${this.name}:`, error.message);
             throw error;
         }
     }
@@ -78,14 +75,13 @@ export class PadelHouseScraper {
         const dateStr = date.toISOString().split('T')[0];
         try {
             await this.ensureLoggedIn();
-            console.log(`[PadelHouse] Fetching slots for ${dateStr}...`);
-            const res = await axios.post(`${BASE_URL}/gs-api`, {
+            const res = await axios.post(`${this.config.baseUrl}/gs-api`, {
                 event: "reservationManager.getAvailableSlotsForDay",
                 args: {
                     day: dateStr,
-                    idSport: PADEL_SPORT_ID,
+                    idSport: this.config.sportId,
                     subjectUserId: parseInt(this.userId),
-                    targetClubId: parseInt(this.clubId)
+                    targetClubId: parseInt(this.config.clubId)
                 }
             }, {
                 headers: {
@@ -93,68 +89,65 @@ export class PadelHouseScraper {
                     'Content-Type': 'application/json',
                     'X-XSRF-TOKEN': this.xsrf,
                     'X-USER-ID': this.userId,
-                    'X-CLUB-ID': this.clubId
+                    'X-CLUB-ID': this.config.clubId
                 }
             });
-            // The API returns an object where keys are court IDs
             const courtsData = res.data;
-            if (!courtsData || typeof courtsData !== 'object' || courtsData.error) {
-                console.error('[PadelHouse] API error or no data');
+            if (!courtsData || typeof courtsData !== 'object' || courtsData.error)
                 return [];
-            }
             for (const courtId in courtsData) {
                 const court = courtsData[courtId];
                 if (!court.slotsAvailable)
                     continue;
                 for (const slotRaw of court.slotsAvailable) {
-                    // dateTimeStart format: "2026-02-25 15:00:00"
                     const startTime = new Date(slotRaw.dateTimeStart.replace(' ', 'T'));
                     for (const duration of slotRaw.durations) {
                         const endTime = new Date(startTime.getTime() + duration * 60000);
-                        // Padel House: 48€ (Off-Peak) / 60€ (Peak) for 90min
-                        let price = 48; // Default off-peak
-                        const dayOfWeek = startTime.getDay();
+                        // Price calculation based on known club rates
+                        // GS API does not return prices, so we use best-known rates
+                        let price = null;
                         const hour = startTime.getHours();
-                        const minute = startTime.getMinutes();
-                        const timeInMins = hour * 60 + minute;
-                        if (duration === 90) {
-                            if (dayOfWeek >= 1 && dayOfWeek <= 5) {
-                                // Weekday Peak: 18:00 (1080) to 23:00
-                                if (timeInMins >= 1080) {
-                                    price = 60;
-                                }
-                            }
-                            // Weekends are off-peak all day
+                        const dayOfWeek = startTime.getDay();
+                        const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
+                        const isPeak = hour >= 18 || isWeekend;
+                        if (this.name.includes('House')) {
+                            // Padel House Cenon: 48€ off-peak, 60€ peak (90min)
+                            price = isPeak ? 60 : 48;
                         }
-                        else if (duration === 60) {
-                            price = price / 1.5;
+                        else if (this.name.includes('MY PADEL') || this.name.includes('My Padel')) {
+                            // MY PADEL Ayguemorte: 42€ off-peak, 60€ peak (90min)
+                            // Peak = 12h-14h & 16h30-22h30 weekdays, 09h-17h weekends
+                            const isPeakMyPadel = isWeekend || (hour >= 12 && hour < 14) || (hour >= 16);
+                            price = isPeakMyPadel ? 60 : 42;
                         }
+                        else {
+                            price = 48; // Fallback
+                        }
+                        if (duration === 60 && price !== null)
+                            price = Math.round(price / 1.5);
                         slots.push({
-                            id: `padelhouse-${courtId}-${startTime.getTime()}-${duration}`,
+                            id: `gs-${this.config.clubId}-${courtId}-${startTime.getTime()}-${duration}`,
                             provider: 'gestion-sports',
                             centerName: this.name,
                             startTime,
                             endTime,
                             durationMinutes: duration,
-                            price: price,
+                            price: Math.round(price),
                             currency: 'EUR',
-                            bookingUrl: 'https://padelhousefrance.gestion-sports.com/appli/Reservation',
+                            bookingUrl: `${this.config.baseUrl}/appli/Reservation`,
                             courtName: court.name,
-                            availableCourts: 1, // We get data per court
+                            availableCourts: 1,
                             indoor: court.type === 'indoor',
                         });
                     }
                 }
             }
-            console.log(`[PadelHouse] ✅ ${slots.length} raw slots found (before aggregation)`);
+            console.log(`[GestionSports] ✅ ${slots.length} slots for ${this.name} on ${dateStr}`);
         }
         catch (error) {
-            console.error('[PadelHouse] Error:', error.message);
-            this.xsrf = null; // Force re-login on error
+            console.error(`[GestionSports] Fetch error for ${this.name}:`, error.message);
+            this.xsrf = null;
         }
         return slots;
-    }
-    async close() {
-        // Nothing to close for Axios
     }
 }

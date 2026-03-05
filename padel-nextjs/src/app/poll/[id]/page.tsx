@@ -1,16 +1,33 @@
-import ClubBookingInterface from '@/components/ClubBookingInterface';
 import { createClient } from '@/utils/supabase/server';
+import { getPollData } from '@/app/poll/actions';
+import PollVotingView from '@/components/PollVotingView';
+import { notFound } from 'next/navigation';
 
-export default async function PollPage({ params }: { params: Promise<{ id: string }> }) {
+export default async function PollPage({
+    params,
+    searchParams
+}: {
+    params: Promise<{ id: string }>,
+    searchParams: Promise<{ guest?: string }>
+}) {
     const supabase = await createClient();
     const { data: { user } } = await supabase.auth.getUser();
 
-    // Attendre correctement `params` (requis dans NextJS 15+)
     const resolvedParams = await params;
+    const resolvedSearchParams = await searchParams;
+
+    // Fetch full poll data with slots and existing votes
+    const poll = await getPollData(resolvedParams.id);
+
+    if (!poll) {
+        return notFound();
+    }
 
     return (
-        <div style={{ width: '100vw', minHeight: '100vh', overflowX: 'hidden' }}>
-            <ClubBookingInterface user={user} initialPollId={resolvedParams.id} />
-        </div>
+        <PollVotingView
+            poll={poll}
+            user={user}
+            guestName={resolvedSearchParams.guest}
+        />
     );
 }
