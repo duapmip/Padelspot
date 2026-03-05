@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { format, parseISO, addDays, startOfToday, eachDayOfInterval, isSameDay, startOfWeek, endOfWeek } from 'date-fns';
 import { fr } from 'date-fns/locale';
-import { ArrowRight, Zap, Filter, X, ChevronLeft, ChevronRight, ChevronUp, Plus, MapPin, Calendar, Users, CheckCircle2, UserPlus, Share2, Check, Lock, Heart } from 'lucide-react';
+import { ArrowRight, Zap, Filter, X, ChevronLeft, ChevronRight, ChevronUp, Plus, MapPin, Calendar, Users, CheckCircle2, UserPlus, Share2, Check, Lock, Heart, Trash2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import dynamic from 'next/dynamic';
 // Leaflet is loaded dynamically only client-side
@@ -1126,7 +1126,7 @@ export default function ClubBookingInterface({ user, initialPollId }: { user: Us
                     const diff = Math.ceil((lastDate.getTime() - firstDate.getTime()) / (1000 * 60 * 60 * 24));
 
                     const fetchStartStr = format(firstDate, "yyyy-MM-dd'T'00:00:00.000'Z'"); // Beginning of range
-                    const fetchEndStr = format(addDays(firstDate, Math.max(14, diff + 1)), "yyyy-MM-dd'T'23:59:59.999'Z'");
+                    const fetchEndStr = format(addDays(firstDate, Math.max(15, diff + 1)), "yyyy-MM-dd'T'23:59:59.999'Z'");
 
                     console.log(`Fetching from Supabase from ${fetchStartStr} to ${fetchEndStr}`);
 
@@ -1370,6 +1370,15 @@ export default function ClubBookingInterface({ user, initialPollId }: { user: Us
         if (!error) {
             setFriends(prev => prev.filter(f => f.id !== friendId));
         }
+    };
+
+    const handleDeletePoll = async () => {
+        if (!pollId || !confirm('Supprimer ce sondage ? Cette action est irréversible.')) return;
+        await supabase.from('poll_votes').delete().eq('poll_id', pollId);
+        await supabase.from('poll_slots').delete().eq('poll_id', pollId);
+        await supabase.from('polls').delete().eq('id', pollId);
+        setPollId(null);
+        navigateTo('home');
     };
 
     const handleVote = async (slotId: string) => {
@@ -2089,7 +2098,24 @@ export default function ClubBookingInterface({ user, initialPollId }: { user: Us
                                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontWeight: 950, fontSize: '1.35rem', textTransform: 'uppercase', cursor: 'pointer' }} onClick={() => navigateTo('home')}>
                                     <Zap fill="var(--sun-blaze)" stroke="none" size={26} /> PadelSpot
                                 </div>
-                                <div style={{ display: 'flex', gap: '1rem' }}>
+                                <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center' }}>
+                                    <button
+                                        onClick={() => {
+                                            const url = `${window.location.origin}/poll/${pollId}`;
+                                            navigator.clipboard.writeText(url);
+                                        }}
+                                        style={{ background: 'var(--pitch-black)', color: '#fff', border: 'none', padding: '0.5rem 1.25rem', borderRadius: '999px', fontWeight: 900, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.7rem' }}
+                                    >
+                                        <Share2 size={13} /> PARTAGER
+                                    </button>
+                                    {user?.id === pollCreatorId && (
+                                        <button
+                                            onClick={handleDeletePoll}
+                                            style={{ background: 'rgba(220,38,38,0.08)', color: '#dc2626', border: 'none', padding: '0.5rem 0.75rem', borderRadius: '999px', fontWeight: 900, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.7rem' }}
+                                        >
+                                            <Trash2 size={13} />
+                                        </button>
+                                    )}
                                     <button onClick={() => setView(previousView)} style={{ background: 'rgba(0,0,0,0.04)', border: 'none', color: 'var(--pitch-black)', padding: '0.5rem 1.25rem', borderRadius: '999px', fontWeight: 900, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.75rem' }}>
                                         <ChevronLeft size={16} /> RETOUR {previousView === 'results' ? 'AUX CRÉNEAUX' : previousView === 'profile' ? 'AU PROFIL' : ''}
                                     </button>
@@ -2097,10 +2123,10 @@ export default function ClubBookingInterface({ user, initialPollId }: { user: Us
                             </div>
                         </div>
 
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '4rem' }}>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
                             {/* NARROW CONTAINER SECTION: Header & Actions */}
                             <div style={{ maxWidth: 1000, width: '100%', margin: '0 auto', padding: '0 2rem' }}>
-                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: '2rem' }}>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: '1.5rem' }}>
                                     <div>
                                         <h1 style={{ fontSize: '3.5rem', fontWeight: 950, fontFamily: 'var(--font-heading)', textTransform: 'uppercase', lineHeight: 0.9 }}>Sondage<br /><span style={{ color: 'var(--sun-blaze)' }}>Dispo.</span></h1>
                                         <div style={{ marginTop: '1.5rem', display: 'flex', alignItems: 'center', gap: '1.5rem', flexWrap: 'wrap' }}>
@@ -2131,7 +2157,7 @@ export default function ClubBookingInterface({ user, initialPollId }: { user: Us
 
                             {/* MAIN CONTENT Area */}
                             <div style={{ maxWidth: 1000, width: '100%', margin: '0 auto', padding: '0 2rem' }}>
-                                <div style={{ display: 'flex', flexDirection: 'column', gap: '3rem' }}>
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
                                     {(() => {
                                         const isCreator = user?.id === pollCreatorId;
                                         const pSlots = selectedSlots.map(id => slots.find(s => s.id === id)).filter(Boolean) as any[];
@@ -2174,14 +2200,15 @@ export default function ClubBookingInterface({ user, initialPollId }: { user: Us
 
                                                             return (
                                                                 <div key={dKey} style={{
-                                                                    background: '#fff', borderRadius: '1.5rem', padding: '1.25rem 0.5rem',
+                                                                    background: isToday ? 'var(--pitch-black)' : '#fff', borderRadius: '1.5rem', padding: '1rem 0.5rem',
                                                                     display: 'flex', flexDirection: 'column', alignItems: 'center',
                                                                     boxShadow: '0 4px 15px rgba(0,0,0,0.01)',
-                                                                    border: isToday ? '1px solid var(--sun-blaze)' : (hasSlots ? '1px solid rgba(0,0,0,0.05)' : '1px solid transparent'),
+                                                                    border: isToday ? 'none' : (hasSlots ? '1px solid rgba(0,0,0,0.05)' : '1px solid transparent'),
                                                                     opacity: hasSlots ? 1 : 0.25
                                                                 }}>
-                                                                    <div style={{ fontSize: '0.6rem', fontWeight: 950, opacity: 0.3, textTransform: 'uppercase', marginBottom: '0.4rem' }}>{format(day, 'eee', { locale: fr })}</div>
-                                                                    <div style={{ fontSize: '1.6rem', fontWeight: 950, marginBottom: '0.8rem', letterSpacing: '-0.05em', color: isToday ? 'var(--sun-blaze)' : 'inherit' }}>{format(day, 'd')}</div>
+                                                                    {isToday && <div style={{ fontSize: '0.45rem', fontWeight: 950, color: 'var(--sun-blaze)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.2rem' }}>auj.</div>}
+                                                                    <div style={{ fontSize: '0.6rem', fontWeight: 950, opacity: isToday ? 0.5 : 0.3, textTransform: 'uppercase', marginBottom: '0.4rem', color: isToday ? '#fff' : 'inherit' }}>{format(day, 'eee', { locale: fr })}</div>
+                                                                    <div style={{ fontSize: '1.6rem', fontWeight: 950, marginBottom: '0.8rem', letterSpacing: '-0.05em', color: isToday ? '#fff' : 'inherit' }}>{format(day, 'd')}</div>
                                                                     <div style={{ display: 'flex', flexDirection: 'column', gap: '0.3rem', width: '100%', padding: '0 0.25rem' }}>
                                                                         {daySlots.sort((a, b) => a.startTime.getTime() - b.startTime.getTime()).map(s => (
                                                                             <div key={s.id} style={{ background: 'var(--sun-blaze)', color: '#fff', fontSize: '0.55rem', fontWeight: 950, padding: '0.2rem 0', borderRadius: '0.5rem', textAlign: 'center', width: '100%' }}>
@@ -2200,14 +2227,16 @@ export default function ClubBookingInterface({ user, initialPollId }: { user: Us
                                         return (
                                             <>
                                                 {favorite && (
-                                                    <div style={{ background: 'rgba(255,107,0,0.08)', border: '1px solid rgba(255,107,0,0.15)', borderRadius: '2.5rem', padding: '1.5rem 2rem', display: 'flex', alignItems: 'center', gap: '1.5rem' }}>
-                                                        <div style={{ width: 50, height: 50, borderRadius: '1.25rem', background: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 10px 20px rgba(255,107,0,0.1)' }}>
-                                                            <span style={{ fontSize: '1.25rem' }}>🏆</span>
+                                                    <div style={{ background: 'var(--pitch-black)', borderRadius: '2rem', padding: '1.25rem 1.75rem', display: 'flex', alignItems: 'center', gap: '1.25rem' }}>
+                                                        <div style={{ width: 44, height: 44, borderRadius: '1rem', background: 'var(--sun-blaze)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                                                            <Zap fill="#fff" stroke="none" size={20} />
                                                         </div>
-                                                        <div>
-                                                            <div style={{ fontSize: '1rem', fontWeight: 950, color: 'var(--pitch-black)' }}>Créneau favori</div>
-                                                            <div style={{ fontSize: '0.85rem', fontWeight: 700, opacity: 0.6, marginTop: '0.2rem' }}>
-                                                                <span style={{ color: 'var(--sun-blaze)' }}>{format(favorite.slot.startTime, 'HH:mm')}</span> — {favorite.count} votes • {favorite.slot.centerName}
+                                                        <div style={{ flex: 1, minWidth: 0 }}>
+                                                            <div style={{ fontSize: '0.6rem', fontWeight: 950, color: 'rgba(255,255,255,0.4)', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '0.2rem' }}>Créneau favori · {favorite.count} votes</div>
+                                                            <div style={{ fontSize: '1.1rem', fontWeight: 950, color: '#fff', display: 'flex', alignItems: 'baseline', gap: '0.6rem' }}>
+                                                                <span style={{ color: 'var(--sun-blaze)' }}>{format(favorite.slot.startTime, 'HH:mm')}</span>
+                                                                <span style={{ fontSize: '0.8rem', opacity: 0.6 }}>{format(favorite.slot.startTime, 'eee d MMM', { locale: fr })}</span>
+                                                                <span style={{ fontSize: '0.75rem', opacity: 0.45 }}>· {favorite.slot.centerName}</span>
                                                             </div>
                                                         </div>
                                                     </div>
@@ -2292,20 +2321,16 @@ export default function ClubBookingInterface({ user, initialPollId }: { user: Us
                                     </div>
                                 )}
 
-                                <div style={{ background: 'var(--pitch-black)', color: '#fff', padding: '4rem', borderRadius: '3.5rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', boxShadow: '0 30px 60px rgba(0,0,0,0.1)' }}>
-                                    <div>
-                                        <div style={{ fontWeight: 950, fontSize: '1.6rem', marginBottom: '0.5rem' }}>Partager le sondage</div>
-                                        <div style={{ opacity: 0.5, fontSize: '0.95rem', fontWeight: 600 }}>Copié le lien et envoyez-le sur WhatsApp</div>
-                                    </div>
+                                <div style={{ background: 'rgba(0,0,0,0.03)', borderRadius: '2rem', padding: '1.25rem 1.75rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                    <div style={{ fontWeight: 700, fontSize: '0.85rem', opacity: 0.5 }}>Partagez le lien à vos potes pour qu'ils votent</div>
                                     <button
                                         onClick={() => {
                                             const url = `${window.location.origin}/poll/${pollId}`;
                                             navigator.clipboard.writeText(url);
-                                            alert('Lien copié !');
                                         }}
-                                        style={{ background: 'var(--sun-blaze)', color: '#fff', border: 'none', padding: '1.25rem 2.5rem', borderRadius: '1.5rem', fontWeight: 950, fontSize: '1rem', display: 'flex', alignItems: 'center', gap: '1rem', cursor: 'pointer' }}
+                                        style={{ background: 'var(--pitch-black)', color: '#fff', border: 'none', padding: '0.65rem 1.5rem', borderRadius: '999px', fontWeight: 950, fontSize: '0.75rem', display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer', flexShrink: 0 }}
                                     >
-                                        <Share2 size={20} /> COPIER LE LIEN
+                                        <Share2 size={14} /> COPIER LE LIEN
                                     </button>
                                 </div>
 
