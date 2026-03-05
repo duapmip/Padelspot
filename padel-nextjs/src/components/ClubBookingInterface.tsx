@@ -984,12 +984,14 @@ export default function ClubBookingInterface({ user, initialPollId }: { user: Us
         return slots.filter((slot) => {
             const d = slot.startTime;
             const slotTotalMins = d.getHours() * 60 + d.getMinutes();
+            // Use local date string for the key to match ALL_DAYS keys
             const dayKey = format(d, 'yyyy-MM-dd');
             const sel = selections.find(s => ALL_DAYS[s.dayIndex].key === dayKey);
             if (!sel) return false;
 
             const selTotalMins = sel.hour * 60 + sel.minute;
-            const isTimeMatch = (slotTotalMins >= selTotalMins - 15 && slotTotalMins <= selTotalMins + 480);
+            // Loosen time match for debugging: +12 hours instead of +8
+            const isTimeMatch = (slotTotalMins >= selTotalMins - 60 && slotTotalMins <= selTotalMins + 720);
 
             const isDurationMatch = durationFilter === 'all' || slot.durationMinutes === parseInt(durationFilter);
 
@@ -998,6 +1000,11 @@ export default function ClubBookingInterface({ user, initialPollId }: { user: Us
             const isMatchTypeMatch = matchTypeFilter === 'all' || (matchTypeFilter === '1v1' && is1v1) || (matchTypeFilter === '2v2' && is2v2);
 
             const isFavoriteMatch = !onlyFavorites || favorites.includes(slot.centerName);
+
+            if (dayKey === '2026-03-19') {
+                // Log only for the problematic day
+                // console.log(`Slot at ${slot.startTime} match?`, { isTimeMatch, isDurationMatch, isMatchTypeMatch, isFavoriteMatch });
+            }
 
             return isTimeMatch && isDurationMatch && isMatchTypeMatch && isFavoriteMatch;
         });
@@ -1137,6 +1144,8 @@ export default function ClubBookingInterface({ user, initialPollId }: { user: Us
                         .gte('start_time', fetchStartStr)
                         .lte('start_time', fetchEndStr)
                         .order('start_time', { ascending: true });
+
+                    console.log(`Supabase returned ${supabaseSlots?.length || 0} slots`);
 
                     if (error) {
                         console.error('Error fetching Supabase slots:', error);
