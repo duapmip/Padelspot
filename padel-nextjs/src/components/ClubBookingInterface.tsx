@@ -2126,533 +2126,316 @@ export default function ClubBookingInterface({ user, initialPollId }: { user: Us
                         guestName={voterName}
                     />
                 )}
-                {/* REMOVED OLD POLL BLOCK */}
-                {false && view === 'poll' && (
-
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
-                        {/* NARROW CONTAINER SECTION: Header & Actions */}
-                        <div style={{ maxWidth: 1000, width: '100%', margin: '0 auto', padding: '0 2rem' }}>
-                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: '1.5rem' }}>
-                                <div>
-                                    <h1 style={{ fontSize: '3.5rem', fontWeight: 950, fontFamily: 'var(--font-heading)', textTransform: 'uppercase', lineHeight: 0.9 }}>Sondage<br /><span style={{ color: 'var(--sun-blaze)' }}>Dispo.</span></h1>
-                                    <div style={{ marginTop: '1.5rem', display: 'flex', alignItems: 'center', gap: '1.5rem', flexWrap: 'wrap' }}>
-                                        <div style={{ background: Array.from(new Set(pollVotes.map(v => v.user_name))).length >= targetVoters ? 'var(--sun-blaze)' : 'rgba(0,0,0,0.05)', color: Array.from(new Set(pollVotes.map(v => v.user_name))).length >= targetVoters ? '#fff' : 'inherit', padding: '0.6rem 1.2rem', borderRadius: '99px', fontSize: '0.75rem', fontWeight: 950, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                                            <Users size={14} /> {Array.from(new Set(pollVotes.map(v => v.user_name))).length} RÉPONSES
-                                        </div>
-                                        <div style={{ opacity: 0.4, fontWeight: 950, fontSize: '0.7rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>• Match de {targetVoters} joueurs</div>
-                                        {Array.from(new Set(pollVotes.map(v => v.user_name))).length >= targetVoters && (
-                                            <div style={{ background: '#00C853', color: '#fff', padding: '0.6rem 1.2rem', borderRadius: '99px', fontSize: '0.75rem', fontWeight: 950 }}>MATCH COMPLET ! 🎾</div>
-                                        )}
+                    {view === 'profile' && (
+                        <motion.div key="profile" initial={{ opacity: 0 }} animate={{ opacity: 1 }} style={{ background: 'var(--off-white-clay)', minHeight: '100vh', padding: '0 0 5rem 0' }}>
+                            {/* UNIFIED HEADER BAR */}
+                            <div style={{ background: '#fff', borderBottom: '1px solid rgba(0,0,0,0.05)', padding: '1rem 2rem', marginBottom: '3rem', position: 'sticky', top: 0, zIndex: 100 }}>
+                                <div style={{ maxWidth: 1600, width: '100%', margin: '0 auto', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontWeight: 950, fontSize: '1.35rem', textTransform: 'uppercase', cursor: 'pointer' }} onClick={() => navigateTo('home')}>
+                                        <Zap fill="var(--sun-blaze)" stroke="none" size={26} /> PadelSpot
+                                    </div>
+                                    <div style={{ display: 'flex', gap: '1rem' }}>
+                                        <button onClick={() => setView(previousView)} style={{ background: 'rgba(0,0,0,0.04)', border: 'none', color: 'var(--pitch-black)', padding: '0.5rem 1.25rem', borderRadius: '999px', fontWeight: 900, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.75rem' }}>
+                                            <ChevronLeft size={16} /> RETOUR {previousView === 'results' ? 'AUX CRÉNEAUX' : previousView === 'poll' ? 'AU SONDAGE' : ''}
+                                        </button>
                                     </div>
                                 </div>
                             </div>
 
-                            {!user && (
-                                <div style={{ background: '#fff', padding: '1.5rem', borderRadius: '2rem', border: '1px solid rgba(0,0,0,0.05)', boxShadow: '0 10px 40px rgba(0,0,0,0.02)', marginBottom: '2rem' }}>
-                                    <label style={{ display: 'block', fontSize: '0.7rem', fontWeight: 950, marginBottom: '0.75rem', textTransform: 'uppercase', opacity: 0.5 }}>Qui vote ?</label>
-                                    <input
-                                        type="text"
-                                        placeholder="Ton prénom / Surnom..."
-                                        value={voterName}
-                                        onChange={(e) => setVoterName(e.target.value)}
-                                        style={{ width: '100%', padding: '0.75rem 1rem', borderRadius: '1.25rem', border: '1px solid rgba(0,0,0,0.08)', background: 'rgba(0,0,0,0.01)', outline: 'none', fontSize: '1.1rem', fontWeight: 950, color: 'var(--pitch-black)' }}
-                                    />
+                            <div style={{ maxWidth: 1000, margin: '0 auto', width: '100%', padding: '0 2rem' }}>
+
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '2rem', marginBottom: '2rem' }}>
+                                    <div style={{ width: 100, height: 100, borderRadius: '2rem', background: 'var(--sun-blaze)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '3rem', fontWeight: 950 }}>{profileFields.firstName?.[0] || user?.email?.[0]?.toUpperCase() || '?'}</div>
+                                    <div style={{ flex: 1 }}>
+                                        <h1 style={{ fontSize: '3rem', fontWeight: 950, marginBottom: '0.5rem', color: 'var(--pitch-black)' }}>Mon Profil</h1>
+                                        <p style={{ fontSize: '1.1rem', opacity: 0.5, fontWeight: 600, color: 'var(--pitch-black)' }}>{user?.email}</p>
+                                    </div>
+                                    <button
+                                        onClick={() => logout()}
+                                        style={{
+                                            background: 'rgba(0,0,0,0.05)',
+                                            color: 'var(--pitch-black)',
+                                            border: '1px solid rgba(0,0,0,0.1)',
+                                            padding: '0.75rem 1.5rem',
+                                            borderRadius: '999px',
+                                            fontWeight: 900,
+                                            fontSize: '0.85rem',
+                                            cursor: 'pointer',
+                                            transition: 'all 0.2s'
+                                        }}
+                                        onMouseOver={(e) => e.currentTarget.style.background = 'rgba(0,0,0,0.1)'}
+                                        onMouseOut={(e) => e.currentTarget.style.background = 'rgba(0,0,0,0.05)'}
+                                    >
+                                        DÉCONNEXION
+                                    </button>
                                 </div>
-                            )}
-                        </div>
 
-                        {/* MAIN CONTENT Area */}
-                        <div style={{ maxWidth: 1000, width: '100%', margin: '0 auto', padding: '0 2rem' }}>
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-                                {(() => {
-                                    const isCreator = user?.id === pollCreatorId;
-                                    const pSlots = selectedSlots.map(id => slots.find(s => s.id === id)).filter(Boolean) as any[];
-                                    if (pSlots.length === 0) return null;
+                                <section style={{ marginBottom: '2rem', background: 'rgba(255,107,0,0.03)', padding: '3rem', borderRadius: '2.5rem', border: '1px solid rgba(255,107,0,0.1)' }}>
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2.5rem' }}>
+                                        <h2 style={{ fontSize: '1.25rem', fontWeight: 950, textTransform: 'uppercase', margin: 0 }}>Mes Potes 👥</h2>
+                                        <div style={{ display: 'flex', gap: '0.5rem' }}>
+                                            <input
+                                                type="text"
+                                                placeholder="Nom du pote..."
+                                                value={newFriendName}
+                                                onChange={(e) => setNewFriendName(e.target.value)}
+                                                style={{ padding: '0.75rem 1.5rem', borderRadius: '999px', border: '1px solid rgba(255,107,0,0.2)', background: '#fff', fontWeight: 700, fontSize: '0.85rem', color: 'var(--pitch-black)' }}
+                                            />
+                                            <button onClick={addFriend} style={{ background: 'var(--sun-blaze)', color: '#fff', border: 'none', padding: '0.75rem 1.75rem', borderRadius: '999px', fontWeight: 900, fontSize: '0.85rem', cursor: 'pointer' }}>AJOUTER</button>
+                                        </div>
+                                    </div>
 
-                                    // 1. Finding Favorite (most votes)
-                                    const voteCounts = pSlots.map(s => ({
-                                        slot: s,
-                                        count: pollVotes.filter(v => v.slot_id === s.id).length
-                                    })).sort((a, b) => b.count - a.count);
-                                    const favorite = voteCounts[0]?.count > 0 ? voteCounts[0] : null;
-
-                                    // 2. Prepare Calendar Data
-                                    const today = startOfToday();
-                                    const nextWeek = addDays(today, 7);
-
-                                    const groupSlotsByDay = (slotsArr: any[]) => {
-                                        const grouped: Record<string, any[]> = {};
-                                        slotsArr.forEach(s => {
-                                            const d = format(s.startTime, 'yyyy-MM-dd');
-                                            if (!grouped[d]) grouped[d] = [];
-                                            grouped[d].push(s);
-                                        });
-                                        return grouped;
-                                    };
-
-                                    const renderCompactWeek = (title: string, startDate: Date) => {
-                                        const weekDays = Array.from({ length: 7 }, (_, i) => addDays(startDate, i));
-                                        const grouped = groupSlotsByDay(pSlots);
-
-                                        return (
-                                            <div style={{ marginBottom: '2rem' }}>
-                                                <div style={{ fontSize: '0.7rem', fontWeight: 950, opacity: 0.35, textTransform: 'uppercase', letterSpacing: '0.15em', marginBottom: '1.25rem' }}>{title}</div>
-                                                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: '0.75rem' }}>
-                                                    {weekDays.map(day => {
-                                                        const dKey = format(day, 'yyyy-MM-dd');
-                                                        const daySlots = grouped[dKey] || [];
-                                                        const isToday = isSameDay(day, today);
-                                                        const hasSlots = daySlots.length > 0;
-
-                                                        return (
-                                                            <div key={dKey} style={{
-                                                                background: isToday ? 'var(--pitch-black)' : '#fff', borderRadius: '1.5rem', padding: '1rem 0.5rem',
-                                                                display: 'flex', flexDirection: 'column', alignItems: 'center',
-                                                                boxShadow: '0 4px 15px rgba(0,0,0,0.01)',
-                                                                border: isToday ? 'none' : (hasSlots ? '1px solid rgba(0,0,0,0.05)' : '1px solid transparent'),
-                                                                opacity: hasSlots ? 1 : 0.25
-                                                            }}>
-                                                                {isToday && <div style={{ fontSize: '0.45rem', fontWeight: 950, color: 'var(--sun-blaze)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.2rem' }}>auj.</div>}
-                                                                <div style={{ fontSize: '0.6rem', fontWeight: 950, opacity: isToday ? 0.5 : 0.3, textTransform: 'uppercase', marginBottom: '0.4rem', color: isToday ? '#fff' : 'inherit' }}>{format(day, 'eee', { locale: fr })}</div>
-                                                                <div style={{ fontSize: '1.6rem', fontWeight: 950, marginBottom: '0.8rem', letterSpacing: '-0.05em', color: isToday ? '#fff' : 'inherit' }}>{format(day, 'd')}</div>
-                                                                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.3rem', width: '100%', padding: '0 0.25rem' }}>
-                                                                    {daySlots.sort((a, b) => a.startTime.getTime() - b.startTime.getTime()).map(s => (
-                                                                        <div key={s.id} style={{ background: 'var(--sun-blaze)', color: '#fff', fontSize: '0.55rem', fontWeight: 950, padding: '0.2rem 0', borderRadius: '0.5rem', textAlign: 'center', width: '100%' }}>
-                                                                            {format(s.startTime, 'HH:mm')}
-                                                                        </div>
-                                                                    ))}
-                                                                </div>
-                                                            </div>
-                                                        );
-                                                    })}
-                                                </div>
+                                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '1rem' }}>
+                                        {friends.map(friend => (
+                                            <div key={friend.id} style={{ background: '#fff', padding: '1rem 1.5rem', borderRadius: '1.5rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', border: '1px solid rgba(0,0,0,0.05)', color: 'var(--pitch-black)' }}>
+                                                <span style={{ fontWeight: 800 }}>{friend.friend_name}</span>
+                                                <button onClick={() => removeFriend(friend.id)} style={{ background: 'none', border: 'none', cursor: 'pointer', opacity: 0.3 }}><X size={16} /></button>
                                             </div>
-                                        );
-                                    };
-
-                                    return (
-                                        <>
-                                            {favorite && (
-                                                <div style={{ background: 'var(--pitch-black)', borderRadius: '2rem', padding: '1.25rem 1.75rem', display: 'flex', alignItems: 'center', gap: '1.25rem' }}>
-                                                    <div style={{ width: 44, height: 44, borderRadius: '1rem', background: 'var(--sun-blaze)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                                                        <Zap fill="#fff" stroke="none" size={20} />
-                                                    </div>
-                                                    <div style={{ flex: 1, minWidth: 0 }}>
-                                                        <div style={{ fontSize: '0.6rem', fontWeight: 950, color: 'rgba(255,255,255,0.4)', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '0.2rem' }}>Créneau favori · {favorite.count} votes</div>
-                                                        <div style={{ fontSize: '1.1rem', fontWeight: 950, color: '#fff', display: 'flex', alignItems: 'baseline', gap: '0.6rem' }}>
-                                                            <span style={{ color: 'var(--sun-blaze)' }}>{format(favorite.slot.startTime, 'HH:mm')}</span>
-                                                            <span style={{ fontSize: '0.8rem', opacity: 0.6 }}>{format(favorite.slot.startTime, 'eee d MMM', { locale: fr })}</span>
-                                                            <span style={{ fontSize: '0.75rem', opacity: 0.45 }}>· {favorite.slot.centerName}</span>
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                            )}
-
-                                            <div style={{ display: 'flex', flexDirection: 'column' }}>
-                                                {renderCompactWeek('CETTE SEMAINE', today)}
-                                                {renderCompactWeek('SEMAINE PROCHAINE', nextWeek)}
-                                            </div>
-
-                                            <div style={{ fontSize: '0.75rem', fontWeight: 950, opacity: 0.35, textTransform: 'uppercase', letterSpacing: '0.15em', marginBottom: '0.5rem' }}>Détail des créneaux</div>
-                                            <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-                                                {pSlots.sort((a, b) => a.startTime.getTime() - b.startTime.getTime()).map(slot => {
-                                                    const votes = pollVotes.filter(v => v.slot_id === slot.id);
-                                                    const name = user ? (profileFields.firstName || user.email?.split('@')[0]) : voterName;
-                                                    const hasVoted = votes.some(v => v.user_name === name);
-
-                                                    return (
-                                                        <div key={slot.id} style={{ background: '#fff', padding: '1.2rem 2rem', borderRadius: '2rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between', boxShadow: '0 10px 30px rgba(0,0,0,0.02)', border: '1px solid rgba(0,0,0,0.03)' }}>
-                                                            <div style={{ display: 'flex', alignItems: 'center', gap: '2rem' }}>
-                                                                <div style={{ width: 8, height: 8, borderRadius: '50%', background: 'rgba(0,0,0,0.1)' }} />
-                                                                <div style={{ display: 'flex', alignItems: 'baseline', gap: '0.75rem' }}>
-                                                                    <span style={{ fontSize: '1.5rem', fontWeight: 950, letterSpacing: '-0.02em' }}>{format(slot.startTime, 'HH:mm')}</span>
-                                                                    <span style={{ fontSize: '0.75rem', fontWeight: 900, opacity: 0.4, textTransform: 'uppercase' }}>{format(slot.startTime, 'eee d', { locale: fr })}</span>
-                                                                    <span style={{ fontSize: '0.85rem', fontWeight: 700, opacity: 0.5 }}>{slot.centerName}</span>
-                                                                </div>
-                                                            </div>
-
-                                                            <div style={{ display: 'flex', alignItems: 'center', gap: '1.5rem' }}>
-                                                                <div style={{ display: 'flex', alignItems: 'center' }}>
-                                                                    {votes.map((v, i) => (
-                                                                        <div key={i} style={{
-                                                                            width: 32, height: 32, borderRadius: '50%',
-                                                                            background: `hsl(${(i * 137) % 360}, 70%, 50%)`,
-                                                                            border: '2px solid #fff',
-                                                                            marginLeft: i === 0 ? 0 : -10,
-                                                                            display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                                                            color: '#fff', fontSize: '0.65rem', fontWeight: 950,
-                                                                            boxShadow: '0 4px 8px rgba(0,0,0,0.1)'
-                                                                        }}>
-                                                                            {v.user_name[0].toUpperCase()}
-                                                                        </div>
-                                                                    ))}
-                                                                </div>
-
-                                                                <button
-                                                                    onClick={() => handleVote(slot.id)}
-                                                                    disabled={isCreator}
-                                                                    style={{
-                                                                        width: 44, height: 44, borderRadius: '50%', border: 'none',
-                                                                        background: hasVoted ? 'var(--sun-blaze)' : 'rgba(0,0,0,0.04)',
-                                                                        color: hasVoted ? '#fff' : 'rgba(0,0,0,0.1)',
-                                                                        cursor: isCreator ? 'default' : 'pointer',
-                                                                        display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                                                        transition: 'all 0.2s',
-                                                                        boxShadow: hasVoted ? '0 10px 20px rgba(255,107,0,0.2)' : 'none'
-                                                                    }}
-                                                                >
-                                                                    {hasVoted ? <Check size={24} strokeWidth={4} /> : (isCreator ? <X size={18} /> : <Check size={24} strokeWidth={4} />)}
-                                                                </button>
-                                                            </div>
-                                                        </div>
-                                                    );
-                                                })}
-                                            </div>
-                                        </>
-                                    );
-                                })()}
-                            </div>
-                        </div>
-
-                        {/* FRIENDS & SHARE Section */}
-                        <div style={{ maxWidth: 1000, width: '100%', margin: '0 auto', padding: '0 2rem' }}>
-                            {user && friends.length > 0 && friends.filter(f => !new Set(pollVotes.map(v => v.user_name)).has(f.friend_name)).length > 0 && (
-                                <div style={{ background: '#fff', padding: '1.5rem', borderRadius: '2rem', border: '1px solid rgba(0,0,0,0.05)', marginBottom: '3rem' }}>
-                                    <div style={{ fontWeight: 950, fontSize: '0.75rem', textTransform: 'uppercase', marginBottom: '1.5rem', opacity: 0.4 }}>Qui manque à l'appel ? 🕵️‍♂️</div>
-                                    <div style={{ display: 'flex', gap: '0.8rem', flexWrap: 'wrap' }}>
-                                        {friends.filter(f => !new Set(pollVotes.map(v => v.user_name)).has(f.friend_name)).map(f => (
-                                            <div key={f.id} style={{ opacity: 0.6, background: 'rgba(0,0,0,0.04)', padding: '0.5rem 1.25rem', borderRadius: '99px', fontSize: '0.8rem', fontWeight: 950 }}>{f.friend_name}</div>
                                         ))}
+                                        {friends.length === 0 && <div style={{ opacity: 0.4, fontStyle: 'italic', fontSize: '0.9rem' }}>Aucun pote ajouté pour l'instant.</div>}
                                     </div>
-                                </div>
-                            )}
+                                </section>
 
-                            <div style={{ background: 'rgba(0,0,0,0.03)', borderRadius: '2rem', padding: '1.25rem 1.75rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                <div style={{ fontWeight: 700, fontSize: '0.85rem', opacity: 0.5 }}>Partagez le lien à vos potes pour qu'ils votent</div>
-                                <button
-                                    onClick={() => {
-                                        const url = `${window.location.origin}/poll/${pollId}`;
-                                        navigator.clipboard.writeText(url);
-                                    }}
-                                    style={{ background: 'var(--pitch-black)', color: '#fff', border: 'none', padding: '0.65rem 1.5rem', borderRadius: '999px', fontWeight: 950, fontSize: '0.75rem', display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer', flexShrink: 0 }}
-                                >
-                                    <Share2 size={14} /> COPIER LE LIEN
-                                </button>
+                                <section style={{ marginBottom: '2rem', background: '#fff', padding: '3rem', borderRadius: '2.5rem', border: '1px solid rgba(0,0,0,0.05)' }}>
+                                    <h2 style={{ fontSize: '1.25rem', fontWeight: 950, marginBottom: '2.5rem', textTransform: 'uppercase', color: 'var(--pitch-black)' }}>Informations Personnelles</h2>
+                                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '2rem' }}>
+                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '4rem' }}>
+                                            <label style={{ fontSize: '0.75rem', fontWeight: 900, opacity: 0.5, textTransform: 'uppercase' }}>Prénom</label>
+                                            <input
+                                                type="text"
+                                                value={profileFields.firstName}
+                                                onChange={(e) => updateProfile({ firstName: e.target.value })}
+                                                placeholder="Votre prénom"
+                                                style={{ background: 'rgba(0,0,0,0.03)', border: '1px solid rgba(0,0,0,0.05)', padding: '1.25rem', borderRadius: '1.25rem', color: 'var(--pitch-black)', fontWeight: 700, fontSize: '1rem' }}
+                                            />
+                                        </div>
+                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '4rem' }}>
+                                            <label style={{ fontSize: '0.75rem', fontWeight: 900, opacity: 0.5, textTransform: 'uppercase', color: 'var(--pitch-black)' }}>Nom</label>
+                                            <input
+                                                type="text"
+                                                value={profileFields.lastName}
+                                                onChange={(e) => updateProfile({ lastName: e.target.value })}
+                                                placeholder="Votre nom"
+                                                style={{ background: 'rgba(0,0,0,0.03)', border: '1px solid rgba(0,0,0,0.05)', padding: '1.25rem', borderRadius: '1.25rem', color: 'var(--pitch-black)', fontWeight: 700, fontSize: '1rem' }}
+                                            />
+                                        </div>
+                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '4rem' }}>
+                                            <label style={{ fontSize: '0.75rem', fontWeight: 900, opacity: 0.5, textTransform: 'uppercase' }}>Distance Max (km)</label>
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                                                <input
+                                                    type="range"
+                                                    min="5"
+                                                    max="100"
+                                                    step="5"
+                                                    value={profileFields.maxDistance}
+                                                    onChange={(e) => updateProfile({ maxDistance: parseInt(e.target.value) })}
+                                                    style={{ flex: 1, accentColor: 'var(--sun-blaze)' }}
+                                                />
+                                                <span style={{ fontWeight: 950, fontSize: '1.25rem', color: 'var(--sun-blaze)', width: '4rem', textAlign: 'right' }}>{profileFields.maxDistance}</span>
+                                            </div>
+                                        </div>
+                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '4rem' }}>
+                                            <label style={{ fontSize: '0.75rem', fontWeight: 900, opacity: 0.5, textTransform: 'uppercase' }}>Côté Préféré</label>
+                                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '4rem' }}>
+                                                {(['left', 'right', 'both'] as const).map(side => (
+                                                    <button
+                                                        key={side}
+                                                        onClick={() => updateProfile({ preferredSide: side })}
+                                                        style={{
+                                                            background: profileFields.preferredSide === side ? 'var(--sun-blaze)' : 'rgba(0,0,0,0.05)',
+                                                            color: profileFields.preferredSide === side ? '#fff' : 'var(--pitch-black)',
+                                                            border: 'none',
+                                                            padding: '1.25rem 0.5rem',
+                                                            borderRadius: '1.25rem',
+                                                            fontWeight: 900,
+                                                            fontSize: '0.75rem',
+                                                            cursor: 'pointer',
+                                                            textTransform: 'uppercase'
+                                                        }}
+                                                    >
+                                                        {side === 'left' ? 'Gauche' : side === 'right' ? 'Droite' : 'Les deux'}
+                                                    </button>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    </div>
+                                </section>
+
+                                <section style={{ marginBottom: '2rem' }}>
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: '2.5rem' }}>
+                                        <h2 style={{ fontSize: '3rem', fontWeight: 950, textTransform: 'uppercase', color: 'var(--pitch-black)' }}>Mes Clubs Favoris</h2>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                                            <span style={{ fontSize: '0.75rem', fontWeight: 900, opacity: 0.4 }}>AJOUTER UN CLUB</span>
+                                            <select
+                                                onChange={(e) => {
+                                                    if (e.target.value) toggleFavorite(e.target.value, e as any);
+                                                    e.target.value = '';
+                                                }}
+                                                style={{ background: '#fff', border: '1px solid rgba(0,0,0,0.1)', padding: '0.75rem 1.5rem', borderRadius: '1rem', color: 'var(--pitch-black)', fontWeight: 800, cursor: 'pointer', outline: 'none' }}
+                                            >
+                                                <option value="">Sélectionner...</option>
+                                                {availableClubs.filter(c => !favorites.includes(c)).map(club => (
+                                                    <option key={club} value={club}>{club}</option>
+                                                ))}
+                                            </select>
+                                        </div>
+                                    </div>
+                                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(340px, 1fr))', gap: '1.25rem' }}>
+                                        {favorites.map(club => (
+                                            <div key={club} style={{ background: '#fff', padding: '1.5rem 2rem', borderRadius: '1.5rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', border: '1px solid rgba(0,0,0,0.05)' }}>
+                                                <div style={{ display: 'flex', alignItems: 'center', gap: '1.25rem' }}>
+                                                    <Heart fill="var(--sun-blaze)" color="var(--sun-blaze)" size={20} />
+                                                    <span style={{ fontWeight: 900, fontSize: '1.1rem', color: 'var(--pitch-black)' }}>{club}</span>
+                                                </div>
+                                                <button
+                                                    onClick={(e) => toggleFavorite(club, e)}
+                                                    style={{ background: 'none', border: 'none', color: 'var(--pitch-black)', opacity: 0.3, cursor: 'pointer', fontWeight: 800, fontSize: '0.7rem' }}
+                                                >RETIRER</button>
+                                            </div>
+                                        ))}
+                                        {favorites.length === 0 && (
+                                            <div style={{ gridColumn: '1 / span 2', padding: '4rem', textAlign: 'center', background: 'rgba(255,255,255,0.02)', borderRadius: '2rem', border: '1px dashed rgba(255,255,255,0.1)' }}>
+                                                <p style={{ opacity: 0.3, fontWeight: 800 }}>Aucun club en favoris pour le moment.</p>
+                                            </div>
+                                        )}
+                                    </div>
+                                </section>
+
+                                <section style={{ marginTop: '4rem' }}>
+                                    <h2 style={{ fontSize: '3rem', fontWeight: 950, marginBottom: '2rem', textTransform: 'uppercase', color: 'var(--pitch-black)' }}>Sondages Partagés</h2>
+                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                                        {userPolls.map((poll: any) => (
+                                            <div key={poll.id} style={{ background: '#fff', padding: '1.5rem 2rem', borderRadius: '1.5rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', border: '1px solid rgba(0,0,0,0.05)' }}>
+                                                <div>
+                                                    <div style={{ fontWeight: 900, fontSize: '1.1rem', marginBottom: '2rem', color: 'var(--pitch-black)' }}>Sondage {poll.id.slice(0, 8)}</div>
+                                                    <div style={{ fontSize: '0.8rem', opacity: 0.4, fontWeight: 700 }}>Créé le {format(new Date(poll.created_at), 'd MMMM yyyy', { locale: fr })}</div>
+                                                </div>
+                                                <div style={{ display: 'flex', gap: '4rem' }}>
+                                                    <button
+                                                        onClick={() => { setPollId(poll.id); navigateTo('poll'); }}
+                                                        style={{ background: 'var(--sun-blaze)', color: '#fff', border: 'none', padding: '0.6rem 1.25rem', borderRadius: '0.75rem', fontWeight: 900, fontSize: '0.75rem', cursor: 'pointer' }}
+                                                    >VOIR</button>
+                                                    <button
+                                                        onClick={() => {
+                                                            const url = `${window.location.origin}/poll/${poll.id}`;
+                                                            navigator.clipboard.writeText(url);
+                                                            alert('Lien copié !');
+                                                        }}
+                                                        style={{ background: 'rgba(0,0,0,0.05)', color: 'var(--pitch-black)', border: 'none', padding: '0.6rem 1.25rem', borderRadius: '0.75rem', fontWeight: 900, fontSize: '0.75rem', cursor: 'pointer' }}
+                                                    >PARTAGER</button>
+                                                </div>
+                                            </div>
+                                        ))}
+                                        {userPolls.length === 0 && (
+                                            <div style={{ padding: '4rem', textAlign: 'center', background: 'rgba(255,255,255,0.02)', borderRadius: '2rem', border: '1px dashed rgba(255,255,255,0.1)' }}>
+                                                <p style={{ opacity: 0.3, fontWeight: 800 }}>Aucun sondage créé pour le moment.</p>
+                                            </div>
+                                        )}
+                                    </div>
+                                </section>
+                            </div>
+                        </motion.div>
+                    )}            </AnimatePresence >
+
+            {
+                externalBookingSlot && (
+                    <div style={{ position: 'fixed', inset: 0, zIndex: 20000, background: 'rgba(16,16,16,0.92)', backdropFilter: 'blur(20px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '2rem' }}>
+                        <div style={{ background: '#fff', padding: '3.5rem', borderRadius: '3rem', maxWidth: '480px', width: '100%', textAlign: 'center', boxShadow: '0 50px 100px rgba(0,0,0,0.5)' }}>
+                            <div style={{ width: 80, height: 80, borderRadius: '2rem', background: 'rgba(255,107,0,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 2.5rem' }}>
+                                <Zap size={40} fill="var(--sun-blaze)" stroke="none" />
+                            </div>
+                            <h2 style={{ fontSize: '3rem', fontWeight: 950, marginBottom: '2rem', textTransform: 'uppercase', lineHeight: 1 }}>RÉSERVATION LIVE<br /><span style={{ color: 'var(--sun-blaze)' }}>{externalBookingSlot.centerName}</span></h2>
+                            <p style={{ opacity: 0.5, marginBottom: '3.5rem', fontSize: '1rem', fontWeight: 500 }}>Finalisez votre paiement sur l'interface sécurisée de notre partenaire de confiance.</p>
+                            <div style={{ display: 'flex', gap: '1rem' }}>
+                                <a href={externalBookingSlot.bookingUrl} target="_blank" rel="noreferrer" onClick={() => setExternalBookingSlot(null)} style={{ flex: 1, background: 'var(--sun-blaze)', color: '#fff', textDecoration: 'none', padding: '1.25rem', borderRadius: '1.5rem', fontWeight: 950, fontSize: '1rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem' }}>CONTINUER <ArrowRight size={20} /></a>
+                                <button onClick={() => setExternalBookingSlot(null)} style={{ background: '#f5f5f5', color: '#101010', border: 'none', padding: '1.25rem 2rem', borderRadius: '1.5rem', fontWeight: 900, cursor: 'pointer', fontSize: '1rem' }}>RETOUR</button>
+                            </div>
+                        </div>
+                    </div>
+                )
+            }
+
+            <AnimatePresence>
+                {showSelectedModal && (
+                    <div style={{ position: 'fixed', inset: 0, zIndex: 30000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0.5rem 0.75rem' }}>
+                        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setShowSelectedModal(false)} style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(5px)' }} />
+                        <motion.div initial={{ opacity: 0, y: 50, scale: 0.95 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: 50, scale: 0.95 }} style={{ position: 'relative', background: 'var(--off-white-clay)', width: '100%', maxWidth: '420px', borderRadius: '2rem', padding: '1.5rem', boxShadow: '0 25px 50px -12px rgba(0,0,0,0.5)', maxHeight: '80vh', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
+                                <h3 style={{ margin: 0, fontSize: '1.25rem', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '-0.02em', color: 'var(--pitch-black)' }}>Créneaux sélectionnés ({selectedSlots.length})</h3>
+                                <button onClick={() => setShowSelectedModal(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '0.5rem' }}><X size={20} color="var(--pitch-black)" /></button>
                             </div>
 
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                                {slots.filter((s: any) => selectedSlots.includes(s.id)).map((slot: any) => (
+                                    <div key={slot.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.5rem 0.75rem', background: '#fff', borderRadius: '1rem', border: '1px solid rgba(0,0,0,0.05)' }}>
+                                        <div>
+                                            <div style={{ fontWeight: 900, fontSize: '0.9rem', color: 'var(--pitch-black)' }}>{slot.centerName}</div>
+                                            <div style={{ fontSize: '0.8rem', color: '#666', marginTop: '0.2rem' }}>{format(slot.startTime, 'EEEE d MMM • HH:mm', { locale: fr })} • {slot.durationMinutes} min</div>
+                                        </div>
+                                        <button onClick={() => toggleSlotSelection(slot.id)} style={{ background: 'rgba(0,0,0,0.05)', border: 'none', width: '32px', height: '32px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
+                                            <X size={14} color="var(--pitch-black)" />
+                                        </button>
+                                    </div>
+                                ))}
+                                {selectedSlots.length === 0 && (
+                                    <div style={{ textAlign: 'center', padding: '5rem 0', color: '#888', fontStyle: 'italic', fontWeight: 500 }}>Vous avez retiré tous vos créneaux.</div>
+                                )}
+                            </div>
+
+                            <div style={{ borderTop: '1px solid #eee', paddingTop: '1.5rem', marginTop: '0.5rem' }}>
+                                <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 950, textTransform: 'uppercase', marginBottom: '0.75rem', opacity: 0.6 }}>Combien de joueurs doivent répondre ?</label>
+                                <div style={{ display: 'flex', gap: '0.5rem' }}>
+                                    {[2, 3, 4, 6].map(num => (
+                                        <button
+                                            key={num}
+                                            onClick={() => setTargetVoters(num)}
+                                            style={{ flex: 1, padding: '0.5rem 0.75rem', borderRadius: '0.75rem', border: targetVoters === num ? '2px solid var(--sun-blaze)' : '1px solid #eee', background: targetVoters === num ? 'rgba(255,107,0,0.05)' : '#fff', fontWeight: 900, color: targetVoters === num ? 'var(--sun-blaze)' : 'var(--pitch-black)', cursor: 'pointer' }}
+                                        >
+                                            {num}
+                                        </button>
+                                    ))}
+                                </div>
+                                <p style={{ fontSize: '0.7rem', opacity: 0.5, marginTop: '0.75rem', fontWeight: 600 }}>Tu seras notifié dès que {targetVoters} personnes auront répondu.</p>
+                            </div>
+
+                            {selectedSlots.length > 0 && (
+                                <button onClick={() => { setShowSelectedModal(false); handlePollCreation(); }} style={{ width: '100%', marginTop: '1rem', background: 'var(--sun-blaze)', color: '#fff', border: 'none', padding: '1.1rem', borderRadius: '1rem', fontWeight: 900, textTransform: 'uppercase', cursor: 'pointer', display: 'flex', justifyContent: 'center', gap: '0.5rem', alignItems: 'center' }}>
+                                    CRÉER LE SONDAGE AMIS <ArrowRight size={16} />
+                                </button>
+                            )}
+                        </motion.div>
+                    </div>
                 )}
+            </AnimatePresence>
 
+            <AnimatePresence>
+                {showAuthModal && (
+                    <div style={{ position: 'fixed', inset: 0, zIndex: 30000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '2rem' }}>
+                        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setShowAuthModal(false)} style={{ position: 'absolute', inset: 0, background: 'rgba(10,10,10,0.85)', backdropFilter: 'blur(10px)' }} />
+                        <motion.div initial={{ scale: 0.9, opacity: 0, y: 20 }} animate={{ scale: 1, opacity: 1, y: 0 }} exit={{ scale: 0.9, opacity: 0, y: 20 }} style={{ position: 'relative', background: '#fff', padding: '3rem', borderRadius: '3rem', maxWidth: '450px', width: '100%', textAlign: 'center', boxShadow: '0 30px 60px rgba(0,0,0,0.4)' }}>
+                            <button onClick={() => setShowAuthModal(false)} style={{ position: 'absolute', top: '1.5rem', right: '1.5rem', background: 'rgba(0,0,0,0.05)', border: 'none', width: '2.5rem', height: '2.5rem', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}><X size={18} /></button>
 
-                            {view === 'profile' && (
-                                <motion.div key="profile" initial={{ opacity: 0 }} animate={{ opacity: 1 }} style={{ background: 'var(--off-white-clay)', minHeight: '100vh', padding: '0 0 5rem 0' }}>
-                                    {/* UNIFIED HEADER BAR */}
-                                    <div style={{ background: '#fff', borderBottom: '1px solid rgba(0,0,0,0.05)', padding: '1rem 2rem', marginBottom: '3rem', position: 'sticky', top: 0, zIndex: 100 }}>
-                                        <div style={{ maxWidth: 1600, width: '100%', margin: '0 auto', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontWeight: 950, fontSize: '1.35rem', textTransform: 'uppercase', cursor: 'pointer' }} onClick={() => navigateTo('home')}>
-                                                <Zap fill="var(--sun-blaze)" stroke="none" size={26} /> PadelSpot
-                                            </div>
-                                            <div style={{ display: 'flex', gap: '1rem' }}>
-                                                <button onClick={() => setView(previousView)} style={{ background: 'rgba(0,0,0,0.04)', border: 'none', color: 'var(--pitch-black)', padding: '0.5rem 1.25rem', borderRadius: '999px', fontWeight: 900, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.75rem' }}>
-                                                    <ChevronLeft size={16} /> RETOUR {previousView === 'results' ? 'AUX CRÉNEAUX' : previousView === 'poll' ? 'AU SONDAGE' : ''}
-                                                </button>
-                                            </div>
-                                        </div>
-                                    </div>
+                            <div style={{ width: 70, height: 70, borderRadius: '2rem', background: 'rgba(255,107,0,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 2rem' }}>
+                                <Users size={32} color="var(--sun-blaze)" />
+                            </div>
 
-                                    <div style={{ maxWidth: 1000, margin: '0 auto', width: '100%', padding: '0 2rem' }}>
+                            <h2 style={{ fontSize: '1.8rem', fontWeight: 950, marginBottom: '2rem', lineHeight: 1.1 }}>Organiser un match<br />n'a jamais été aussi simple.</h2>
 
-                                        <div style={{ display: 'flex', alignItems: 'center', gap: '2rem', marginBottom: '2rem' }}>
-                                            <div style={{ width: 100, height: 100, borderRadius: '2rem', background: 'var(--sun-blaze)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '3rem', fontWeight: 950 }}>{profileFields.firstName?.[0] || user?.email?.[0]?.toUpperCase() || '?'}</div>
-                                            <div style={{ flex: 1 }}>
-                                                <h1 style={{ fontSize: '3rem', fontWeight: 950, marginBottom: '0.5rem', color: 'var(--pitch-black)' }}>Mon Profil</h1>
-                                                <p style={{ fontSize: '1.1rem', opacity: 0.5, fontWeight: 600, color: 'var(--pitch-black)' }}>{user?.email}</p>
-                                            </div>
-                                            <button
-                                                onClick={() => logout()}
-                                                style={{
-                                                    background: 'rgba(0,0,0,0.05)',
-                                                    color: 'var(--pitch-black)',
-                                                    border: '1px solid rgba(0,0,0,0.1)',
-                                                    padding: '0.75rem 1.5rem',
-                                                    borderRadius: '999px',
-                                                    fontWeight: 900,
-                                                    fontSize: '0.85rem',
-                                                    cursor: 'pointer',
-                                                    transition: 'all 0.2s'
-                                                }}
-                                                onMouseOver={(e) => e.currentTarget.style.background = 'rgba(0,0,0,0.1)'}
-                                                onMouseOut={(e) => e.currentTarget.style.background = 'rgba(0,0,0,0.05)'}
-                                            >
-                                                DÉCONNEXION
-                                            </button>
-                                        </div>
+                            <p style={{ opacity: 0.6, fontSize: '0.95rem', fontWeight: 600, marginBottom: '2.5rem', lineHeight: 1.5 }}>
+                                Sélectionne plusieurs créneaux qui t'arrangent, génère un lien de sondage, et envoie-le sur ton groupe WhatsApp. Tes potes indiquent leurs dispos en un clic, sans même avoir de compte.
+                            </p>
 
-                                        <section style={{ marginBottom: '2rem', background: 'rgba(255,107,0,0.03)', padding: '3rem', borderRadius: '2.5rem', border: '1px solid rgba(255,107,0,0.1)' }}>
-                                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2.5rem' }}>
-                                                <h2 style={{ fontSize: '1.25rem', fontWeight: 950, textTransform: 'uppercase', margin: 0 }}>Mes Potes 👥</h2>
-                                                <div style={{ display: 'flex', gap: '0.5rem' }}>
-                                                    <input
-                                                        type="text"
-                                                        placeholder="Nom du pote..."
-                                                        value={newFriendName}
-                                                        onChange={(e) => setNewFriendName(e.target.value)}
-                                                        style={{ padding: '0.75rem 1.5rem', borderRadius: '999px', border: '1px solid rgba(255,107,0,0.2)', background: '#fff', fontWeight: 700, fontSize: '0.85rem', color: 'var(--pitch-black)' }}
-                                                    />
-                                                    <button onClick={addFriend} style={{ background: 'var(--sun-blaze)', color: '#fff', border: 'none', padding: '0.75rem 1.75rem', borderRadius: '999px', fontWeight: 900, fontSize: '0.85rem', cursor: 'pointer' }}>AJOUTER</button>
-                                                </div>
-                                            </div>
+                            <Link href="/login" style={{ width: '100%', background: 'var(--pitch-black)', color: '#fff', textDecoration: 'none', padding: '1.25rem', borderRadius: '1.5rem', fontWeight: 950, fontSize: '1rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4rem', marginBottom: '2rem' }}>
+                                <Lock size={18} /> CRÉER MON COMPTE
+                            </Link>
 
-                                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '1rem' }}>
-                                                {friends.map(friend => (
-                                                    <div key={friend.id} style={{ background: '#fff', padding: '1rem 1.5rem', borderRadius: '1.5rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', border: '1px solid rgba(0,0,0,0.05)', color: 'var(--pitch-black)' }}>
-                                                        <span style={{ fontWeight: 800 }}>{friend.friend_name}</span>
-                                                        <button onClick={() => removeFriend(friend.id)} style={{ background: 'none', border: 'none', cursor: 'pointer', opacity: 0.3 }}><X size={16} /></button>
-                                                    </div>
-                                                ))}
-                                                {friends.length === 0 && <div style={{ opacity: 0.4, fontStyle: 'italic', fontSize: '0.9rem' }}>Aucun pote ajouté pour l'instant.</div>}
-                                            </div>
-                                        </section>
-
-                                        <section style={{ marginBottom: '2rem', background: '#fff', padding: '3rem', borderRadius: '2.5rem', border: '1px solid rgba(0,0,0,0.05)' }}>
-                                            <h2 style={{ fontSize: '1.25rem', fontWeight: 950, marginBottom: '2.5rem', textTransform: 'uppercase', color: 'var(--pitch-black)' }}>Informations Personnelles</h2>
-                                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '2rem' }}>
-                                                <div style={{ display: 'flex', flexDirection: 'column', gap: '4rem' }}>
-                                                    <label style={{ fontSize: '0.75rem', fontWeight: 900, opacity: 0.5, textTransform: 'uppercase' }}>Prénom</label>
-                                                    <input
-                                                        type="text"
-                                                        value={profileFields.firstName}
-                                                        onChange={(e) => updateProfile({ firstName: e.target.value })}
-                                                        placeholder="Votre prénom"
-                                                        style={{ background: 'rgba(0,0,0,0.03)', border: '1px solid rgba(0,0,0,0.05)', padding: '1.25rem', borderRadius: '1.25rem', color: 'var(--pitch-black)', fontWeight: 700, fontSize: '1rem' }}
-                                                    />
-                                                </div>
-                                                <div style={{ display: 'flex', flexDirection: 'column', gap: '4rem' }}>
-                                                    <label style={{ fontSize: '0.75rem', fontWeight: 900, opacity: 0.5, textTransform: 'uppercase', color: 'var(--pitch-black)' }}>Nom</label>
-                                                    <input
-                                                        type="text"
-                                                        value={profileFields.lastName}
-                                                        onChange={(e) => updateProfile({ lastName: e.target.value })}
-                                                        placeholder="Votre nom"
-                                                        style={{ background: 'rgba(0,0,0,0.03)', border: '1px solid rgba(0,0,0,0.05)', padding: '1.25rem', borderRadius: '1.25rem', color: 'var(--pitch-black)', fontWeight: 700, fontSize: '1rem' }}
-                                                    />
-                                                </div>
-                                                <div style={{ display: 'flex', flexDirection: 'column', gap: '4rem' }}>
-                                                    <label style={{ fontSize: '0.75rem', fontWeight: 900, opacity: 0.5, textTransform: 'uppercase' }}>Distance Max (km)</label>
-                                                    <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-                                                        <input
-                                                            type="range"
-                                                            min="5"
-                                                            max="100"
-                                                            step="5"
-                                                            value={profileFields.maxDistance}
-                                                            onChange={(e) => updateProfile({ maxDistance: parseInt(e.target.value) })}
-                                                            style={{ flex: 1, accentColor: 'var(--sun-blaze)' }}
-                                                        />
-                                                        <span style={{ fontWeight: 950, fontSize: '1.25rem', color: 'var(--sun-blaze)', width: '4rem', textAlign: 'right' }}>{profileFields.maxDistance}</span>
-                                                    </div>
-                                                </div>
-                                                <div style={{ display: 'flex', flexDirection: 'column', gap: '4rem' }}>
-                                                    <label style={{ fontSize: '0.75rem', fontWeight: 900, opacity: 0.5, textTransform: 'uppercase' }}>Côté Préféré</label>
-                                                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '4rem' }}>
-                                                        {(['left', 'right', 'both'] as const).map(side => (
-                                                            <button
-                                                                key={side}
-                                                                onClick={() => updateProfile({ preferredSide: side })}
-                                                                style={{
-                                                                    background: profileFields.preferredSide === side ? 'var(--sun-blaze)' : 'rgba(0,0,0,0.05)',
-                                                                    color: profileFields.preferredSide === side ? '#fff' : 'var(--pitch-black)',
-                                                                    border: 'none',
-                                                                    padding: '1.25rem 0.5rem',
-                                                                    borderRadius: '1.25rem',
-                                                                    fontWeight: 900,
-                                                                    fontSize: '0.75rem',
-                                                                    cursor: 'pointer',
-                                                                    textTransform: 'uppercase'
-                                                                }}
-                                                            >
-                                                                {side === 'left' ? 'Gauche' : side === 'right' ? 'Droite' : 'Les deux'}
-                                                            </button>
-                                                        ))}
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        </section>
-
-                                        <section style={{ marginBottom: '2rem' }}>
-                                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: '2.5rem' }}>
-                                                <h2 style={{ fontSize: '3rem', fontWeight: 950, textTransform: 'uppercase', color: 'var(--pitch-black)' }}>Mes Clubs Favoris</h2>
-                                                <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-                                                    <span style={{ fontSize: '0.75rem', fontWeight: 900, opacity: 0.4 }}>AJOUTER UN CLUB</span>
-                                                    <select
-                                                        onChange={(e) => {
-                                                            if (e.target.value) toggleFavorite(e.target.value, e as any);
-                                                            e.target.value = '';
-                                                        }}
-                                                        style={{ background: '#fff', border: '1px solid rgba(0,0,0,0.1)', padding: '0.75rem 1.5rem', borderRadius: '1rem', color: 'var(--pitch-black)', fontWeight: 800, cursor: 'pointer', outline: 'none' }}
-                                                    >
-                                                        <option value="">Sélectionner...</option>
-                                                        {availableClubs.filter(c => !favorites.includes(c)).map(club => (
-                                                            <option key={club} value={club}>{club}</option>
-                                                        ))}
-                                                    </select>
-                                                </div>
-                                            </div>
-                                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(340px, 1fr))', gap: '1.25rem' }}>
-                                                {favorites.map(club => (
-                                                    <div key={club} style={{ background: '#fff', padding: '1.5rem 2rem', borderRadius: '1.5rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', border: '1px solid rgba(0,0,0,0.05)' }}>
-                                                        <div style={{ display: 'flex', alignItems: 'center', gap: '1.25rem' }}>
-                                                            <Heart fill="var(--sun-blaze)" color="var(--sun-blaze)" size={20} />
-                                                            <span style={{ fontWeight: 900, fontSize: '1.1rem', color: 'var(--pitch-black)' }}>{club}</span>
-                                                        </div>
-                                                        <button
-                                                            onClick={(e) => toggleFavorite(club, e)}
-                                                            style={{ background: 'none', border: 'none', color: 'var(--pitch-black)', opacity: 0.3, cursor: 'pointer', fontWeight: 800, fontSize: '0.7rem' }}
-                                                        >RETIRER</button>
-                                                    </div>
-                                                ))}
-                                                {favorites.length === 0 && (
-                                                    <div style={{ gridColumn: '1 / span 2', padding: '4rem', textAlign: 'center', background: 'rgba(255,255,255,0.02)', borderRadius: '2rem', border: '1px dashed rgba(255,255,255,0.1)' }}>
-                                                        <p style={{ opacity: 0.3, fontWeight: 800 }}>Aucun club en favoris pour le moment.</p>
-                                                    </div>
-                                                )}
-                                            </div>
-                                        </section>
-
-                                        <section style={{ marginTop: '4rem' }}>
-                                            <h2 style={{ fontSize: '3rem', fontWeight: 950, marginBottom: '2rem', textTransform: 'uppercase', color: 'var(--pitch-black)' }}>Sondages Partagés</h2>
-                                            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                                                {userPolls.map((poll: any) => (
-                                                    <div key={poll.id} style={{ background: '#fff', padding: '1.5rem 2rem', borderRadius: '1.5rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', border: '1px solid rgba(0,0,0,0.05)' }}>
-                                                        <div>
-                                                            <div style={{ fontWeight: 900, fontSize: '1.1rem', marginBottom: '2rem', color: 'var(--pitch-black)' }}>Sondage {poll.id.slice(0, 8)}</div>
-                                                            <div style={{ fontSize: '0.8rem', opacity: 0.4, fontWeight: 700 }}>Créé le {format(new Date(poll.created_at), 'd MMMM yyyy', { locale: fr })}</div>
-                                                        </div>
-                                                        <div style={{ display: 'flex', gap: '4rem' }}>
-                                                            <button
-                                                                onClick={() => { setPollId(poll.id); navigateTo('poll'); }}
-                                                                style={{ background: 'var(--sun-blaze)', color: '#fff', border: 'none', padding: '0.6rem 1.25rem', borderRadius: '0.75rem', fontWeight: 900, fontSize: '0.75rem', cursor: 'pointer' }}
-                                                            >VOIR</button>
-                                                            <button
-                                                                onClick={() => {
-                                                                    const url = `${window.location.origin}/poll/${poll.id}`;
-                                                                    navigator.clipboard.writeText(url);
-                                                                    alert('Lien copié !');
-                                                                }}
-                                                                style={{ background: 'rgba(0,0,0,0.05)', color: 'var(--pitch-black)', border: 'none', padding: '0.6rem 1.25rem', borderRadius: '0.75rem', fontWeight: 900, fontSize: '0.75rem', cursor: 'pointer' }}
-                                                            >PARTAGER</button>
-                                                        </div>
-                                                    </div>
-                                                ))}
-                                                {userPolls.length === 0 && (
-                                                    <div style={{ padding: '4rem', textAlign: 'center', background: 'rgba(255,255,255,0.02)', borderRadius: '2rem', border: '1px dashed rgba(255,255,255,0.1)' }}>
-                                                        <p style={{ opacity: 0.3, fontWeight: 800 }}>Aucun sondage créé pour le moment.</p>
-                                                    </div>
-                                                )}
-                                            </div>
-                                        </section>
-                                    </div>
-                                </motion.div>
-                            )}            </AnimatePresence >
-
-                        {
-                            externalBookingSlot && (
-                                <div style={{ position: 'fixed', inset: 0, zIndex: 20000, background: 'rgba(16,16,16,0.92)', backdropFilter: 'blur(20px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '2rem' }}>
-                                    <div style={{ background: '#fff', padding: '3.5rem', borderRadius: '3rem', maxWidth: '480px', width: '100%', textAlign: 'center', boxShadow: '0 50px 100px rgba(0,0,0,0.5)' }}>
-                                        <div style={{ width: 80, height: 80, borderRadius: '2rem', background: 'rgba(255,107,0,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 2.5rem' }}>
-                                            <Zap size={40} fill="var(--sun-blaze)" stroke="none" />
-                                        </div>
-                                        <h2 style={{ fontSize: '3rem', fontWeight: 950, marginBottom: '2rem', textTransform: 'uppercase', lineHeight: 1 }}>RÉSERVATION LIVE<br /><span style={{ color: 'var(--sun-blaze)' }}>{externalBookingSlot.centerName}</span></h2>
-                                        <p style={{ opacity: 0.5, marginBottom: '3.5rem', fontSize: '1rem', fontWeight: 500 }}>Finalisez votre paiement sur l'interface sécurisée de notre partenaire de confiance.</p>
-                                        <div style={{ display: 'flex', gap: '1rem' }}>
-                                            <a href={externalBookingSlot.bookingUrl} target="_blank" rel="noreferrer" onClick={() => setExternalBookingSlot(null)} style={{ flex: 1, background: 'var(--sun-blaze)', color: '#fff', textDecoration: 'none', padding: '1.25rem', borderRadius: '1.5rem', fontWeight: 950, fontSize: '1rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem' }}>CONTINUER <ArrowRight size={20} /></a>
-                                            <button onClick={() => setExternalBookingSlot(null)} style={{ background: '#f5f5f5', color: '#101010', border: 'none', padding: '1.25rem 2rem', borderRadius: '1.5rem', fontWeight: 900, cursor: 'pointer', fontSize: '1rem' }}>RETOUR</button>
-                                        </div>
-                                    </div>
-                                </div>
-                            )
-                        }
-
-                        <AnimatePresence>
-                            {showSelectedModal && (
-                                <div style={{ position: 'fixed', inset: 0, zIndex: 30000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0.5rem 0.75rem' }}>
-                                    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setShowSelectedModal(false)} style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(5px)' }} />
-                                    <motion.div initial={{ opacity: 0, y: 50, scale: 0.95 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: 50, scale: 0.95 }} style={{ position: 'relative', background: 'var(--off-white-clay)', width: '100%', maxWidth: '420px', borderRadius: '2rem', padding: '1.5rem', boxShadow: '0 25px 50px -12px rgba(0,0,0,0.5)', maxHeight: '80vh', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
-                                            <h3 style={{ margin: 0, fontSize: '1.25rem', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '-0.02em', color: 'var(--pitch-black)' }}>Créneaux sélectionnés ({selectedSlots.length})</h3>
-                                            <button onClick={() => setShowSelectedModal(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '0.5rem' }}><X size={20} color="var(--pitch-black)" /></button>
-                                        </div>
-
-                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                                            {slots.filter((s: any) => selectedSlots.includes(s.id)).map((slot: any) => (
-                                                <div key={slot.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.5rem 0.75rem', background: '#fff', borderRadius: '1rem', border: '1px solid rgba(0,0,0,0.05)' }}>
-                                                    <div>
-                                                        <div style={{ fontWeight: 900, fontSize: '0.9rem', color: 'var(--pitch-black)' }}>{slot.centerName}</div>
-                                                        <div style={{ fontSize: '0.8rem', color: '#666', marginTop: '0.2rem' }}>{format(slot.startTime, 'EEEE d MMM • HH:mm', { locale: fr })} • {slot.durationMinutes} min</div>
-                                                    </div>
-                                                    <button onClick={() => toggleSlotSelection(slot.id)} style={{ background: 'rgba(0,0,0,0.05)', border: 'none', width: '32px', height: '32px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
-                                                        <X size={14} color="var(--pitch-black)" />
-                                                    </button>
-                                                </div>
-                                            ))}
-                                            {selectedSlots.length === 0 && (
-                                                <div style={{ textAlign: 'center', padding: '5rem 0', color: '#888', fontStyle: 'italic', fontWeight: 500 }}>Vous avez retiré tous vos créneaux.</div>
-                                            )}
-                                        </div>
-
-                                        <div style={{ borderTop: '1px solid #eee', paddingTop: '1.5rem', marginTop: '0.5rem' }}>
-                                            <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 950, textTransform: 'uppercase', marginBottom: '0.75rem', opacity: 0.6 }}>Combien de joueurs doivent répondre ?</label>
-                                            <div style={{ display: 'flex', gap: '0.5rem' }}>
-                                                {[2, 3, 4, 6].map(num => (
-                                                    <button
-                                                        key={num}
-                                                        onClick={() => setTargetVoters(num)}
-                                                        style={{ flex: 1, padding: '0.5rem 0.75rem', borderRadius: '0.75rem', border: targetVoters === num ? '2px solid var(--sun-blaze)' : '1px solid #eee', background: targetVoters === num ? 'rgba(255,107,0,0.05)' : '#fff', fontWeight: 900, color: targetVoters === num ? 'var(--sun-blaze)' : 'var(--pitch-black)', cursor: 'pointer' }}
-                                                    >
-                                                        {num}
-                                                    </button>
-                                                ))}
-                                            </div>
-                                            <p style={{ fontSize: '0.7rem', opacity: 0.5, marginTop: '0.75rem', fontWeight: 600 }}>Tu seras notifié dès que {targetVoters} personnes auront répondu.</p>
-                                        </div>
-
-                                        {selectedSlots.length > 0 && (
-                                            <button onClick={() => { setShowSelectedModal(false); handlePollCreation(); }} style={{ width: '100%', marginTop: '1rem', background: 'var(--sun-blaze)', color: '#fff', border: 'none', padding: '1.1rem', borderRadius: '1rem', fontWeight: 900, textTransform: 'uppercase', cursor: 'pointer', display: 'flex', justifyContent: 'center', gap: '0.5rem', alignItems: 'center' }}>
-                                                CRÉER LE SONDAGE AMIS <ArrowRight size={16} />
-                                            </button>
-                                        )}
-                                    </motion.div>
-                                </div>
-                            )}
-                        </AnimatePresence>
-
-                        <AnimatePresence>
-                            {showAuthModal && (
-                                <div style={{ position: 'fixed', inset: 0, zIndex: 30000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '2rem' }}>
-                                    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setShowAuthModal(false)} style={{ position: 'absolute', inset: 0, background: 'rgba(10,10,10,0.85)', backdropFilter: 'blur(10px)' }} />
-                                    <motion.div initial={{ scale: 0.9, opacity: 0, y: 20 }} animate={{ scale: 1, opacity: 1, y: 0 }} exit={{ scale: 0.9, opacity: 0, y: 20 }} style={{ position: 'relative', background: '#fff', padding: '3rem', borderRadius: '3rem', maxWidth: '450px', width: '100%', textAlign: 'center', boxShadow: '0 30px 60px rgba(0,0,0,0.4)' }}>
-                                        <button onClick={() => setShowAuthModal(false)} style={{ position: 'absolute', top: '1.5rem', right: '1.5rem', background: 'rgba(0,0,0,0.05)', border: 'none', width: '2.5rem', height: '2.5rem', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}><X size={18} /></button>
-
-                                        <div style={{ width: 70, height: 70, borderRadius: '2rem', background: 'rgba(255,107,0,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 2rem' }}>
-                                            <Users size={32} color="var(--sun-blaze)" />
-                                        </div>
-
-                                        <h2 style={{ fontSize: '1.8rem', fontWeight: 950, marginBottom: '2rem', lineHeight: 1.1 }}>Organiser un match<br />n'a jamais été aussi simple.</h2>
-
-                                        <p style={{ opacity: 0.6, fontSize: '0.95rem', fontWeight: 600, marginBottom: '2.5rem', lineHeight: 1.5 }}>
-                                            Sélectionne plusieurs créneaux qui t'arrangent, génère un lien de sondage, et envoie-le sur ton groupe WhatsApp. Tes potes indiquent leurs dispos en un clic, sans même avoir de compte.
-                                        </p>
-
-                                        <Link href="/login" style={{ width: '100%', background: 'var(--pitch-black)', color: '#fff', textDecoration: 'none', padding: '1.25rem', borderRadius: '1.5rem', fontWeight: 950, fontSize: '1rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4rem', marginBottom: '2rem' }}>
-                                            <Lock size={18} /> CRÉER MON COMPTE
-                                        </Link>
-
-                                        <Link href="/login" style={{ color: 'var(--pitch-black)', textDecoration: 'none', fontSize: '0.85rem', fontWeight: 900, opacity: 0.5 }}>
-                                            J'ai déjà un compte
-                                        </Link>
-                                    </motion.div>
-                                </div>
-                            )}
-                        </AnimatePresence>
-                    </div >
-                );
+                            <Link href="/login" style={{ color: 'var(--pitch-black)', textDecoration: 'none', fontSize: '0.85rem', fontWeight: 900, opacity: 0.5 }}>
+                                J'ai déjà un compte
+                            </Link>
+                        </motion.div>
+                    </div>
+                )}
+            </AnimatePresence>
+        </div >
+    );
 }
