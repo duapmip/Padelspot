@@ -18,7 +18,7 @@ export default function PollVotingView({ poll, user, guestName }: PollVotingView
     const [loading, setLoading] = useState(false);
 
     // Identify current user's name
-    const currentUserName = guestName || (user ? (user.user_metadata?.first_name || user.email?.split('@')[0]) : '');
+    const currentUserName = guestName || (user ? (user.user_metadata?.first_name || user.email?.split('@')?.[0]) : '');
 
     const handleVoteAction = async (slotId: string, isAvailable: boolean) => {
         if (!currentUserName) {
@@ -52,8 +52,11 @@ export default function PollVotingView({ poll, user, guestName }: PollVotingView
     // Calculate days with slots for the header
     const daysWithSlots = Array.from(new Set(poll.slots.map((s: any) => {
         const actualSlot = s.slot || s;
-        return format(parseISO(actualSlot.start_time), 'yyyy-MM-dd');
-    })));
+        const rawTime = actualSlot.start_time || actualSlot.startTime;
+        if (!rawTime) return null;
+        const date = typeof rawTime === 'string' ? parseISO(rawTime) : rawTime;
+        return format(date, 'yyyy-MM-dd');
+    }).filter(Boolean)));
 
     const votersCount = new Set(votes.filter((v: any) => v.vote_value).map((v: any) => v.user_name)).size;
 
@@ -76,7 +79,9 @@ export default function PollVotingView({ poll, user, guestName }: PollVotingView
                     {poll.slots.sort((a: any, b: any) => {
                         const sA = a.slot || a;
                         const sB = b.slot || b;
-                        return new Date(sA.start_time).getTime() - new Date(sB.start_time).getTime();
+                        const tA = sA.start_time || sA.startTime;
+                        const tB = sB.start_time || sB.startTime;
+                        return new Date(tA).getTime() - new Date(tB).getTime();
                     }).map((slot: any) => (
                         <PollSlotCard
                             key={slot.id}

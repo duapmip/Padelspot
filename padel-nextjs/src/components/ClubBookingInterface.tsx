@@ -1404,7 +1404,7 @@ export default function ClubBookingInterface({ user, initialPollId }: { user: Us
     };
 
     const handleVote = async (slotId: string) => {
-        const name = user ? (profileFields.firstName || user.email?.split('@')[0]) : voterName;
+        const name = user ? (profileFields.firstName || user.email?.split('@')?.[0]) : voterName;
         if (!name) {
             alert("Merci de renseigner votre nom pour voter !");
             return;
@@ -2078,7 +2078,7 @@ export default function ClubBookingInterface({ user, initialPollId }: { user: Us
                                                             if (name.includes('ustct')) return 'USTCT';
                                                             if (name.includes('my padel')) return 'MY PADEL';
                                                             if (name.includes('3d')) return '3D PADEL';
-                                                            return cluster.centerName.split(' ')[0].toUpperCase();
+                                                            return (cluster.centerName || 'PADEL').split(' ')[0].toUpperCase();
                                                         })()}
                                                         </div>
                                                     `,
@@ -2126,216 +2126,216 @@ export default function ClubBookingInterface({ user, initialPollId }: { user: Us
                         guestName={voterName}
                     />
                 )}
-                    {view === 'profile' && (
-                        <motion.div key="profile" initial={{ opacity: 0 }} animate={{ opacity: 1 }} style={{ background: 'var(--off-white-clay)', minHeight: '100vh', padding: '0 0 5rem 0' }}>
-                            {/* UNIFIED HEADER BAR */}
-                            <div style={{ background: '#fff', borderBottom: '1px solid rgba(0,0,0,0.05)', padding: '1rem 2rem', marginBottom: '3rem', position: 'sticky', top: 0, zIndex: 100 }}>
-                                <div style={{ maxWidth: 1600, width: '100%', margin: '0 auto', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontWeight: 950, fontSize: '1.35rem', textTransform: 'uppercase', cursor: 'pointer' }} onClick={() => navigateTo('home')}>
-                                        <Zap fill="var(--sun-blaze)" stroke="none" size={26} /> PadelSpot
-                                    </div>
-                                    <div style={{ display: 'flex', gap: '1rem' }}>
-                                        <button onClick={() => setView(previousView)} style={{ background: 'rgba(0,0,0,0.04)', border: 'none', color: 'var(--pitch-black)', padding: '0.5rem 1.25rem', borderRadius: '999px', fontWeight: 900, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.75rem' }}>
-                                            <ChevronLeft size={16} /> RETOUR {previousView === 'results' ? 'AUX CRÉNEAUX' : previousView === 'poll' ? 'AU SONDAGE' : ''}
-                                        </button>
-                                    </div>
+                {view === 'profile' && (
+                    <motion.div key="profile" initial={{ opacity: 0 }} animate={{ opacity: 1 }} style={{ background: 'var(--off-white-clay)', minHeight: '100vh', padding: '0 0 5rem 0' }}>
+                        {/* UNIFIED HEADER BAR */}
+                        <div style={{ background: '#fff', borderBottom: '1px solid rgba(0,0,0,0.05)', padding: '1rem 2rem', marginBottom: '3rem', position: 'sticky', top: 0, zIndex: 100 }}>
+                            <div style={{ maxWidth: 1600, width: '100%', margin: '0 auto', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontWeight: 950, fontSize: '1.35rem', textTransform: 'uppercase', cursor: 'pointer' }} onClick={() => navigateTo('home')}>
+                                    <Zap fill="var(--sun-blaze)" stroke="none" size={26} /> PadelSpot
                                 </div>
-                            </div>
-
-                            <div style={{ maxWidth: 1000, margin: '0 auto', width: '100%', padding: '0 2rem' }}>
-
-                                <div style={{ display: 'flex', alignItems: 'center', gap: '2rem', marginBottom: '2rem' }}>
-                                    <div style={{ width: 100, height: 100, borderRadius: '2rem', background: 'var(--sun-blaze)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '3rem', fontWeight: 950 }}>{profileFields.firstName?.[0] || user?.email?.[0]?.toUpperCase() || '?'}</div>
-                                    <div style={{ flex: 1 }}>
-                                        <h1 style={{ fontSize: '3rem', fontWeight: 950, marginBottom: '0.5rem', color: 'var(--pitch-black)' }}>Mon Profil</h1>
-                                        <p style={{ fontSize: '1.1rem', opacity: 0.5, fontWeight: 600, color: 'var(--pitch-black)' }}>{user?.email}</p>
-                                    </div>
-                                    <button
-                                        onClick={() => logout()}
-                                        style={{
-                                            background: 'rgba(0,0,0,0.05)',
-                                            color: 'var(--pitch-black)',
-                                            border: '1px solid rgba(0,0,0,0.1)',
-                                            padding: '0.75rem 1.5rem',
-                                            borderRadius: '999px',
-                                            fontWeight: 900,
-                                            fontSize: '0.85rem',
-                                            cursor: 'pointer',
-                                            transition: 'all 0.2s'
-                                        }}
-                                        onMouseOver={(e) => e.currentTarget.style.background = 'rgba(0,0,0,0.1)'}
-                                        onMouseOut={(e) => e.currentTarget.style.background = 'rgba(0,0,0,0.05)'}
-                                    >
-                                        DÉCONNEXION
+                                <div style={{ display: 'flex', gap: '1rem' }}>
+                                    <button onClick={() => setView(previousView)} style={{ background: 'rgba(0,0,0,0.04)', border: 'none', color: 'var(--pitch-black)', padding: '0.5rem 1.25rem', borderRadius: '999px', fontWeight: 900, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.75rem' }}>
+                                        <ChevronLeft size={16} /> RETOUR {previousView === 'results' ? 'AUX CRÉNEAUX' : previousView === 'poll' ? 'AU SONDAGE' : ''}
                                     </button>
                                 </div>
-
-                                <section style={{ marginBottom: '2rem', background: 'rgba(255,107,0,0.03)', padding: '3rem', borderRadius: '2.5rem', border: '1px solid rgba(255,107,0,0.1)' }}>
-                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2.5rem' }}>
-                                        <h2 style={{ fontSize: '1.25rem', fontWeight: 950, textTransform: 'uppercase', margin: 0 }}>Mes Potes 👥</h2>
-                                        <div style={{ display: 'flex', gap: '0.5rem' }}>
-                                            <input
-                                                type="text"
-                                                placeholder="Nom du pote..."
-                                                value={newFriendName}
-                                                onChange={(e) => setNewFriendName(e.target.value)}
-                                                style={{ padding: '0.75rem 1.5rem', borderRadius: '999px', border: '1px solid rgba(255,107,0,0.2)', background: '#fff', fontWeight: 700, fontSize: '0.85rem', color: 'var(--pitch-black)' }}
-                                            />
-                                            <button onClick={addFriend} style={{ background: 'var(--sun-blaze)', color: '#fff', border: 'none', padding: '0.75rem 1.75rem', borderRadius: '999px', fontWeight: 900, fontSize: '0.85rem', cursor: 'pointer' }}>AJOUTER</button>
-                                        </div>
-                                    </div>
-
-                                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '1rem' }}>
-                                        {friends.map(friend => (
-                                            <div key={friend.id} style={{ background: '#fff', padding: '1rem 1.5rem', borderRadius: '1.5rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', border: '1px solid rgba(0,0,0,0.05)', color: 'var(--pitch-black)' }}>
-                                                <span style={{ fontWeight: 800 }}>{friend.friend_name}</span>
-                                                <button onClick={() => removeFriend(friend.id)} style={{ background: 'none', border: 'none', cursor: 'pointer', opacity: 0.3 }}><X size={16} /></button>
-                                            </div>
-                                        ))}
-                                        {friends.length === 0 && <div style={{ opacity: 0.4, fontStyle: 'italic', fontSize: '0.9rem' }}>Aucun pote ajouté pour l'instant.</div>}
-                                    </div>
-                                </section>
-
-                                <section style={{ marginBottom: '2rem', background: '#fff', padding: '3rem', borderRadius: '2.5rem', border: '1px solid rgba(0,0,0,0.05)' }}>
-                                    <h2 style={{ fontSize: '1.25rem', fontWeight: 950, marginBottom: '2.5rem', textTransform: 'uppercase', color: 'var(--pitch-black)' }}>Informations Personnelles</h2>
-                                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '2rem' }}>
-                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '4rem' }}>
-                                            <label style={{ fontSize: '0.75rem', fontWeight: 900, opacity: 0.5, textTransform: 'uppercase' }}>Prénom</label>
-                                            <input
-                                                type="text"
-                                                value={profileFields.firstName}
-                                                onChange={(e) => updateProfile({ firstName: e.target.value })}
-                                                placeholder="Votre prénom"
-                                                style={{ background: 'rgba(0,0,0,0.03)', border: '1px solid rgba(0,0,0,0.05)', padding: '1.25rem', borderRadius: '1.25rem', color: 'var(--pitch-black)', fontWeight: 700, fontSize: '1rem' }}
-                                            />
-                                        </div>
-                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '4rem' }}>
-                                            <label style={{ fontSize: '0.75rem', fontWeight: 900, opacity: 0.5, textTransform: 'uppercase', color: 'var(--pitch-black)' }}>Nom</label>
-                                            <input
-                                                type="text"
-                                                value={profileFields.lastName}
-                                                onChange={(e) => updateProfile({ lastName: e.target.value })}
-                                                placeholder="Votre nom"
-                                                style={{ background: 'rgba(0,0,0,0.03)', border: '1px solid rgba(0,0,0,0.05)', padding: '1.25rem', borderRadius: '1.25rem', color: 'var(--pitch-black)', fontWeight: 700, fontSize: '1rem' }}
-                                            />
-                                        </div>
-                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '4rem' }}>
-                                            <label style={{ fontSize: '0.75rem', fontWeight: 900, opacity: 0.5, textTransform: 'uppercase' }}>Distance Max (km)</label>
-                                            <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-                                                <input
-                                                    type="range"
-                                                    min="5"
-                                                    max="100"
-                                                    step="5"
-                                                    value={profileFields.maxDistance}
-                                                    onChange={(e) => updateProfile({ maxDistance: parseInt(e.target.value) })}
-                                                    style={{ flex: 1, accentColor: 'var(--sun-blaze)' }}
-                                                />
-                                                <span style={{ fontWeight: 950, fontSize: '1.25rem', color: 'var(--sun-blaze)', width: '4rem', textAlign: 'right' }}>{profileFields.maxDistance}</span>
-                                            </div>
-                                        </div>
-                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '4rem' }}>
-                                            <label style={{ fontSize: '0.75rem', fontWeight: 900, opacity: 0.5, textTransform: 'uppercase' }}>Côté Préféré</label>
-                                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '4rem' }}>
-                                                {(['left', 'right', 'both'] as const).map(side => (
-                                                    <button
-                                                        key={side}
-                                                        onClick={() => updateProfile({ preferredSide: side })}
-                                                        style={{
-                                                            background: profileFields.preferredSide === side ? 'var(--sun-blaze)' : 'rgba(0,0,0,0.05)',
-                                                            color: profileFields.preferredSide === side ? '#fff' : 'var(--pitch-black)',
-                                                            border: 'none',
-                                                            padding: '1.25rem 0.5rem',
-                                                            borderRadius: '1.25rem',
-                                                            fontWeight: 900,
-                                                            fontSize: '0.75rem',
-                                                            cursor: 'pointer',
-                                                            textTransform: 'uppercase'
-                                                        }}
-                                                    >
-                                                        {side === 'left' ? 'Gauche' : side === 'right' ? 'Droite' : 'Les deux'}
-                                                    </button>
-                                                ))}
-                                            </div>
-                                        </div>
-                                    </div>
-                                </section>
-
-                                <section style={{ marginBottom: '2rem' }}>
-                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: '2.5rem' }}>
-                                        <h2 style={{ fontSize: '3rem', fontWeight: 950, textTransform: 'uppercase', color: 'var(--pitch-black)' }}>Mes Clubs Favoris</h2>
-                                        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-                                            <span style={{ fontSize: '0.75rem', fontWeight: 900, opacity: 0.4 }}>AJOUTER UN CLUB</span>
-                                            <select
-                                                onChange={(e) => {
-                                                    if (e.target.value) toggleFavorite(e.target.value, e as any);
-                                                    e.target.value = '';
-                                                }}
-                                                style={{ background: '#fff', border: '1px solid rgba(0,0,0,0.1)', padding: '0.75rem 1.5rem', borderRadius: '1rem', color: 'var(--pitch-black)', fontWeight: 800, cursor: 'pointer', outline: 'none' }}
-                                            >
-                                                <option value="">Sélectionner...</option>
-                                                {availableClubs.filter(c => !favorites.includes(c)).map(club => (
-                                                    <option key={club} value={club}>{club}</option>
-                                                ))}
-                                            </select>
-                                        </div>
-                                    </div>
-                                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(340px, 1fr))', gap: '1.25rem' }}>
-                                        {favorites.map(club => (
-                                            <div key={club} style={{ background: '#fff', padding: '1.5rem 2rem', borderRadius: '1.5rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', border: '1px solid rgba(0,0,0,0.05)' }}>
-                                                <div style={{ display: 'flex', alignItems: 'center', gap: '1.25rem' }}>
-                                                    <Heart fill="var(--sun-blaze)" color="var(--sun-blaze)" size={20} />
-                                                    <span style={{ fontWeight: 900, fontSize: '1.1rem', color: 'var(--pitch-black)' }}>{club}</span>
-                                                </div>
-                                                <button
-                                                    onClick={(e) => toggleFavorite(club, e)}
-                                                    style={{ background: 'none', border: 'none', color: 'var(--pitch-black)', opacity: 0.3, cursor: 'pointer', fontWeight: 800, fontSize: '0.7rem' }}
-                                                >RETIRER</button>
-                                            </div>
-                                        ))}
-                                        {favorites.length === 0 && (
-                                            <div style={{ gridColumn: '1 / span 2', padding: '4rem', textAlign: 'center', background: 'rgba(255,255,255,0.02)', borderRadius: '2rem', border: '1px dashed rgba(255,255,255,0.1)' }}>
-                                                <p style={{ opacity: 0.3, fontWeight: 800 }}>Aucun club en favoris pour le moment.</p>
-                                            </div>
-                                        )}
-                                    </div>
-                                </section>
-
-                                <section style={{ marginTop: '4rem' }}>
-                                    <h2 style={{ fontSize: '3rem', fontWeight: 950, marginBottom: '2rem', textTransform: 'uppercase', color: 'var(--pitch-black)' }}>Sondages Partagés</h2>
-                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                                        {userPolls.map((poll: any) => (
-                                            <div key={poll.id} style={{ background: '#fff', padding: '1.5rem 2rem', borderRadius: '1.5rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', border: '1px solid rgba(0,0,0,0.05)' }}>
-                                                <div>
-                                                    <div style={{ fontWeight: 900, fontSize: '1.1rem', marginBottom: '2rem', color: 'var(--pitch-black)' }}>Sondage {poll.id.slice(0, 8)}</div>
-                                                    <div style={{ fontSize: '0.8rem', opacity: 0.4, fontWeight: 700 }}>Créé le {format(new Date(poll.created_at), 'd MMMM yyyy', { locale: fr })}</div>
-                                                </div>
-                                                <div style={{ display: 'flex', gap: '4rem' }}>
-                                                    <button
-                                                        onClick={() => { setPollId(poll.id); navigateTo('poll'); }}
-                                                        style={{ background: 'var(--sun-blaze)', color: '#fff', border: 'none', padding: '0.6rem 1.25rem', borderRadius: '0.75rem', fontWeight: 900, fontSize: '0.75rem', cursor: 'pointer' }}
-                                                    >VOIR</button>
-                                                    <button
-                                                        onClick={() => {
-                                                            const url = `${window.location.origin}/poll/${poll.id}`;
-                                                            navigator.clipboard.writeText(url);
-                                                            alert('Lien copié !');
-                                                        }}
-                                                        style={{ background: 'rgba(0,0,0,0.05)', color: 'var(--pitch-black)', border: 'none', padding: '0.6rem 1.25rem', borderRadius: '0.75rem', fontWeight: 900, fontSize: '0.75rem', cursor: 'pointer' }}
-                                                    >PARTAGER</button>
-                                                </div>
-                                            </div>
-                                        ))}
-                                        {userPolls.length === 0 && (
-                                            <div style={{ padding: '4rem', textAlign: 'center', background: 'rgba(255,255,255,0.02)', borderRadius: '2rem', border: '1px dashed rgba(255,255,255,0.1)' }}>
-                                                <p style={{ opacity: 0.3, fontWeight: 800 }}>Aucun sondage créé pour le moment.</p>
-                                            </div>
-                                        )}
-                                    </div>
-                                </section>
                             </div>
-                        </motion.div>
-                    )}            </AnimatePresence >
+                        </div>
+
+                        <div style={{ maxWidth: 1000, margin: '0 auto', width: '100%', padding: '0 2rem' }}>
+
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '2rem', marginBottom: '2rem' }}>
+                                <div style={{ width: 100, height: 100, borderRadius: '2rem', background: 'var(--sun-blaze)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '3rem', fontWeight: 950 }}>{profileFields.firstName?.[0] || user?.email?.[0]?.toUpperCase() || '?'}</div>
+                                <div style={{ flex: 1 }}>
+                                    <h1 style={{ fontSize: '3rem', fontWeight: 950, marginBottom: '0.5rem', color: 'var(--pitch-black)' }}>Mon Profil</h1>
+                                    <p style={{ fontSize: '1.1rem', opacity: 0.5, fontWeight: 600, color: 'var(--pitch-black)' }}>{user?.email}</p>
+                                </div>
+                                <button
+                                    onClick={() => logout()}
+                                    style={{
+                                        background: 'rgba(0,0,0,0.05)',
+                                        color: 'var(--pitch-black)',
+                                        border: '1px solid rgba(0,0,0,0.1)',
+                                        padding: '0.75rem 1.5rem',
+                                        borderRadius: '999px',
+                                        fontWeight: 900,
+                                        fontSize: '0.85rem',
+                                        cursor: 'pointer',
+                                        transition: 'all 0.2s'
+                                    }}
+                                    onMouseOver={(e) => e.currentTarget.style.background = 'rgba(0,0,0,0.1)'}
+                                    onMouseOut={(e) => e.currentTarget.style.background = 'rgba(0,0,0,0.05)'}
+                                >
+                                    DÉCONNEXION
+                                </button>
+                            </div>
+
+                            <section style={{ marginBottom: '2rem', background: 'rgba(255,107,0,0.03)', padding: '3rem', borderRadius: '2.5rem', border: '1px solid rgba(255,107,0,0.1)' }}>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2.5rem' }}>
+                                    <h2 style={{ fontSize: '1.25rem', fontWeight: 950, textTransform: 'uppercase', margin: 0 }}>Mes Potes 👥</h2>
+                                    <div style={{ display: 'flex', gap: '0.5rem' }}>
+                                        <input
+                                            type="text"
+                                            placeholder="Nom du pote..."
+                                            value={newFriendName}
+                                            onChange={(e) => setNewFriendName(e.target.value)}
+                                            style={{ padding: '0.75rem 1.5rem', borderRadius: '999px', border: '1px solid rgba(255,107,0,0.2)', background: '#fff', fontWeight: 700, fontSize: '0.85rem', color: 'var(--pitch-black)' }}
+                                        />
+                                        <button onClick={addFriend} style={{ background: 'var(--sun-blaze)', color: '#fff', border: 'none', padding: '0.75rem 1.75rem', borderRadius: '999px', fontWeight: 900, fontSize: '0.85rem', cursor: 'pointer' }}>AJOUTER</button>
+                                    </div>
+                                </div>
+
+                                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '1rem' }}>
+                                    {friends.map(friend => (
+                                        <div key={friend.id} style={{ background: '#fff', padding: '1rem 1.5rem', borderRadius: '1.5rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', border: '1px solid rgba(0,0,0,0.05)', color: 'var(--pitch-black)' }}>
+                                            <span style={{ fontWeight: 800 }}>{friend.friend_name}</span>
+                                            <button onClick={() => removeFriend(friend.id)} style={{ background: 'none', border: 'none', cursor: 'pointer', opacity: 0.3 }}><X size={16} /></button>
+                                        </div>
+                                    ))}
+                                    {friends.length === 0 && <div style={{ opacity: 0.4, fontStyle: 'italic', fontSize: '0.9rem' }}>Aucun pote ajouté pour l'instant.</div>}
+                                </div>
+                            </section>
+
+                            <section style={{ marginBottom: '2rem', background: '#fff', padding: '3rem', borderRadius: '2.5rem', border: '1px solid rgba(0,0,0,0.05)' }}>
+                                <h2 style={{ fontSize: '1.25rem', fontWeight: 950, marginBottom: '2.5rem', textTransform: 'uppercase', color: 'var(--pitch-black)' }}>Informations Personnelles</h2>
+                                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '2rem' }}>
+                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '4rem' }}>
+                                        <label style={{ fontSize: '0.75rem', fontWeight: 900, opacity: 0.5, textTransform: 'uppercase' }}>Prénom</label>
+                                        <input
+                                            type="text"
+                                            value={profileFields.firstName}
+                                            onChange={(e) => updateProfile({ firstName: e.target.value })}
+                                            placeholder="Votre prénom"
+                                            style={{ background: 'rgba(0,0,0,0.03)', border: '1px solid rgba(0,0,0,0.05)', padding: '1.25rem', borderRadius: '1.25rem', color: 'var(--pitch-black)', fontWeight: 700, fontSize: '1rem' }}
+                                        />
+                                    </div>
+                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '4rem' }}>
+                                        <label style={{ fontSize: '0.75rem', fontWeight: 900, opacity: 0.5, textTransform: 'uppercase', color: 'var(--pitch-black)' }}>Nom</label>
+                                        <input
+                                            type="text"
+                                            value={profileFields.lastName}
+                                            onChange={(e) => updateProfile({ lastName: e.target.value })}
+                                            placeholder="Votre nom"
+                                            style={{ background: 'rgba(0,0,0,0.03)', border: '1px solid rgba(0,0,0,0.05)', padding: '1.25rem', borderRadius: '1.25rem', color: 'var(--pitch-black)', fontWeight: 700, fontSize: '1rem' }}
+                                        />
+                                    </div>
+                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '4rem' }}>
+                                        <label style={{ fontSize: '0.75rem', fontWeight: 900, opacity: 0.5, textTransform: 'uppercase' }}>Distance Max (km)</label>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                                            <input
+                                                type="range"
+                                                min="5"
+                                                max="100"
+                                                step="5"
+                                                value={profileFields.maxDistance}
+                                                onChange={(e) => updateProfile({ maxDistance: parseInt(e.target.value) })}
+                                                style={{ flex: 1, accentColor: 'var(--sun-blaze)' }}
+                                            />
+                                            <span style={{ fontWeight: 950, fontSize: '1.25rem', color: 'var(--sun-blaze)', width: '4rem', textAlign: 'right' }}>{profileFields.maxDistance}</span>
+                                        </div>
+                                    </div>
+                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '4rem' }}>
+                                        <label style={{ fontSize: '0.75rem', fontWeight: 900, opacity: 0.5, textTransform: 'uppercase' }}>Côté Préféré</label>
+                                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '4rem' }}>
+                                            {(['left', 'right', 'both'] as const).map(side => (
+                                                <button
+                                                    key={side}
+                                                    onClick={() => updateProfile({ preferredSide: side })}
+                                                    style={{
+                                                        background: profileFields.preferredSide === side ? 'var(--sun-blaze)' : 'rgba(0,0,0,0.05)',
+                                                        color: profileFields.preferredSide === side ? '#fff' : 'var(--pitch-black)',
+                                                        border: 'none',
+                                                        padding: '1.25rem 0.5rem',
+                                                        borderRadius: '1.25rem',
+                                                        fontWeight: 900,
+                                                        fontSize: '0.75rem',
+                                                        cursor: 'pointer',
+                                                        textTransform: 'uppercase'
+                                                    }}
+                                                >
+                                                    {side === 'left' ? 'Gauche' : side === 'right' ? 'Droite' : 'Les deux'}
+                                                </button>
+                                            ))}
+                                        </div>
+                                    </div>
+                                </div>
+                            </section>
+
+                            <section style={{ marginBottom: '2rem' }}>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: '2.5rem' }}>
+                                    <h2 style={{ fontSize: '3rem', fontWeight: 950, textTransform: 'uppercase', color: 'var(--pitch-black)' }}>Mes Clubs Favoris</h2>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                                        <span style={{ fontSize: '0.75rem', fontWeight: 900, opacity: 0.4 }}>AJOUTER UN CLUB</span>
+                                        <select
+                                            onChange={(e) => {
+                                                if (e.target.value) toggleFavorite(e.target.value, e as any);
+                                                e.target.value = '';
+                                            }}
+                                            style={{ background: '#fff', border: '1px solid rgba(0,0,0,0.1)', padding: '0.75rem 1.5rem', borderRadius: '1rem', color: 'var(--pitch-black)', fontWeight: 800, cursor: 'pointer', outline: 'none' }}
+                                        >
+                                            <option value="">Sélectionner...</option>
+                                            {availableClubs.filter(c => !favorites.includes(c)).map(club => (
+                                                <option key={club} value={club}>{club}</option>
+                                            ))}
+                                        </select>
+                                    </div>
+                                </div>
+                                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(340px, 1fr))', gap: '1.25rem' }}>
+                                    {favorites.map(club => (
+                                        <div key={club} style={{ background: '#fff', padding: '1.5rem 2rem', borderRadius: '1.5rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', border: '1px solid rgba(0,0,0,0.05)' }}>
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: '1.25rem' }}>
+                                                <Heart fill="var(--sun-blaze)" color="var(--sun-blaze)" size={20} />
+                                                <span style={{ fontWeight: 900, fontSize: '1.1rem', color: 'var(--pitch-black)' }}>{club}</span>
+                                            </div>
+                                            <button
+                                                onClick={(e) => toggleFavorite(club, e)}
+                                                style={{ background: 'none', border: 'none', color: 'var(--pitch-black)', opacity: 0.3, cursor: 'pointer', fontWeight: 800, fontSize: '0.7rem' }}
+                                            >RETIRER</button>
+                                        </div>
+                                    ))}
+                                    {favorites.length === 0 && (
+                                        <div style={{ gridColumn: '1 / span 2', padding: '4rem', textAlign: 'center', background: 'rgba(255,255,255,0.02)', borderRadius: '2rem', border: '1px dashed rgba(255,255,255,0.1)' }}>
+                                            <p style={{ opacity: 0.3, fontWeight: 800 }}>Aucun club en favoris pour le moment.</p>
+                                        </div>
+                                    )}
+                                </div>
+                            </section>
+
+                            <section style={{ marginTop: '4rem' }}>
+                                <h2 style={{ fontSize: '3rem', fontWeight: 950, marginBottom: '2rem', textTransform: 'uppercase', color: 'var(--pitch-black)' }}>Sondages Partagés</h2>
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                                    {userPolls.map((poll: any) => (
+                                        <div key={poll.id} style={{ background: '#fff', padding: '1.5rem 2rem', borderRadius: '1.5rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', border: '1px solid rgba(0,0,0,0.05)' }}>
+                                            <div>
+                                                <div style={{ fontWeight: 900, fontSize: '1.1rem', marginBottom: '2rem', color: 'var(--pitch-black)' }}>Sondage {poll.id.slice(0, 8)}</div>
+                                                <div style={{ fontSize: '0.8rem', opacity: 0.4, fontWeight: 700 }}>Créé le {format(new Date(poll.created_at), 'd MMMM yyyy', { locale: fr })}</div>
+                                            </div>
+                                            <div style={{ display: 'flex', gap: '4rem' }}>
+                                                <button
+                                                    onClick={() => { setPollId(poll.id); navigateTo('poll'); }}
+                                                    style={{ background: 'var(--sun-blaze)', color: '#fff', border: 'none', padding: '0.6rem 1.25rem', borderRadius: '0.75rem', fontWeight: 900, fontSize: '0.75rem', cursor: 'pointer' }}
+                                                >VOIR</button>
+                                                <button
+                                                    onClick={() => {
+                                                        const url = `${window.location.origin}/poll/${poll.id}`;
+                                                        navigator.clipboard.writeText(url);
+                                                        alert('Lien copié !');
+                                                    }}
+                                                    style={{ background: 'rgba(0,0,0,0.05)', color: 'var(--pitch-black)', border: 'none', padding: '0.6rem 1.25rem', borderRadius: '0.75rem', fontWeight: 900, fontSize: '0.75rem', cursor: 'pointer' }}
+                                                >PARTAGER</button>
+                                            </div>
+                                        </div>
+                                    ))}
+                                    {userPolls.length === 0 && (
+                                        <div style={{ padding: '4rem', textAlign: 'center', background: 'rgba(255,255,255,0.02)', borderRadius: '2rem', border: '1px dashed rgba(255,255,255,0.1)' }}>
+                                            <p style={{ opacity: 0.3, fontWeight: 800 }}>Aucun sondage créé pour le moment.</p>
+                                        </div>
+                                    )}
+                                </div>
+                            </section>
+                        </div>
+                    </motion.div>
+                )}            </AnimatePresence >
 
             {
                 externalBookingSlot && (

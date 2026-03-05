@@ -21,7 +21,8 @@ interface PollSlotCardProps {
 export default function PollSlotCard({ slot, voters, currentUserName, onVote }: PollSlotCardProps) {
     // Check if slot.slot is nested (Supabase joined data)
     const actualSlot = slot.slot || slot;
-    const startTime = parseISO(actualSlot.start_time);
+    const rawTime = actualSlot.start_time || actualSlot.startTime;
+    const startTime = typeof rawTime === 'string' ? parseISO(rawTime) : (rawTime instanceof Date ? rawTime : parseISO(String(rawTime || '')));
     const day = format(startTime, 'EEEE d MMMM', { locale: fr });
     const time = format(startTime, 'HH:mm');
 
