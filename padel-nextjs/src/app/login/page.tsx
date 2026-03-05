@@ -1,5 +1,7 @@
 'use client'
 
+export const dynamic = 'force-dynamic'
+
 import { useState, use } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Zap, Mail, ArrowRight, ChevronLeft, Lock } from 'lucide-react'

@@ -1422,7 +1422,7 @@ export default function ClubBookingInterface({ user, initialPollId }: { user: Us
         }
 
         return (
-            <div className="dp-timeline-scroll" style={{ display: 'flex', gap: '4rem', overflowX: 'auto', padding: '0.4rem 0' }}>
+            <div className="dp-timeline-scroll" style={{ display: 'flex', gap: '1rem', overflowX: 'auto', padding: '0.4rem 0' }}>
                 {slotsToDisplay.map((item) => {
                     const isExpanded = expandedDays[day.date] === item.time;
                     const hasSelected = item.group?.slots.some((s: Slot) => selectedSlots.includes(s.id));
