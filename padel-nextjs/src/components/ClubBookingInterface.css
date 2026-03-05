@@ -622,7 +622,7 @@ body {
 
 .dp-date-pill {
     background: #fff;
-    border-radius: 999px;
+    border-radius: 1.25rem;
     padding: 0.5rem;
     width: 60px;
     height: 80px;
