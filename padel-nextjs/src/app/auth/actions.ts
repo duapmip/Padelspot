@@ -80,11 +80,28 @@ export async function createPoll(slotIds: string[], targetVotersCount: number = 
         slot_id: slotId
     }))
 
-    const { error: slotsError } = await supabase
+    const { error: slotsError, data: createdSlots } = await supabase
         .from('poll_slots')
         .insert(pollSlots)
+        .select();
 
-    if (slotsError) return { error: slotsError.message }
+    if (slotsError) return { error: slotsError.message };
+
+    // Automatically mark creator as 'Chaud' (true) on all their selected slots
+    const { data: profile } = await supabase.from('profiles').select('first_name').eq('id', user.id).single();
+    const creatorName = profile?.first_name || user.email?.split('@')[0] || 'Organisateur';
+
+    if (createdSlots && createdSlots.length > 0) {
+        const initialVotes = createdSlots.map(s => ({
+            poll_id: poll.id,
+            slot_id: s.slot_id, // Match the actual slot ID from the slots table
+            user_name: creatorName,
+            vote_value: true,
+            user_id: user.id
+        }));
+
+        await supabase.from('poll_votes').insert(initialVotes);
+    }
 
     return { id: poll.id }
 }

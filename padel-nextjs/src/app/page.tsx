@@ -1,3 +1,4 @@
+import { Suspense } from 'react';
 import ClubBookingInterface from '@/components/ClubBookingInterface';
 import { createClient } from '@/utils/supabase/server';
 
@@ -7,7 +8,9 @@ export default async function Home() {
 
   return (
     <div style={{ width: '100vw', minHeight: '100vh', overflowX: 'hidden' }}>
-      <ClubBookingInterface user={user} />
+      <Suspense fallback={<div>Loading...</div>}>
+        <ClubBookingInterface user={user} />
+      </Suspense>
     </div>
   );
 }

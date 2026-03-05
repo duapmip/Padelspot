@@ -799,6 +799,7 @@ export default function ClubBookingInterface({ user, initialPollId }: { user: Us
     const [userStats, setUserStats] = useState({ matchesPlayed: 12, rating: 4.5, level: 'Intermédiaire' });
     const [userPolls, setUserPolls] = useState<any[]>([]);
     const [pollId, setPollId] = useState<string | null>(initialPollId || null);
+    const [pollCreatorId, setPollCreatorId] = useState<string | null>(null);
     const [pollCreatorName, setPollCreatorName] = useState<string>('');
     const [voterName, setVoterName] = useState(guestNameParam || '');
     const [showAuthModal, setShowAuthModal] = useState(false);
@@ -831,18 +832,19 @@ export default function ClubBookingInterface({ user, initialPollId }: { user: Us
                 // 0. Fetch poll details
                 const { data: pollData } = await supabase
                     .from('polls')
-                    .select('target_voters_count, created_by')
+                    .select('target_voters_count, user_id, created_by')
                     .eq('id', pollId)
                     .single();
                 if (pollData) {
                     setTargetVoters(pollData.target_voters_count);
-                    setPollCreatorId(pollData.created_by || pollData.user_id);
+                    const creatorId = pollData.created_by || pollData.user_id; // Check both in case of migration
+                    setPollCreatorId(creatorId);
 
                     // Fetch Creator Name
                     const { data: creatorProf } = await supabase
                         .from('profiles')
                         .select('first_name')
-                        .eq('id', pollData.created_by || pollData.user_id)
+                        .eq('id', creatorId)
                         .single();
                     if (creatorProf) setPollCreatorName(creatorProf.first_name || 'Un pote');
                 }
@@ -954,7 +956,6 @@ export default function ClubBookingInterface({ user, initialPollId }: { user: Us
     const [editingDayIndex, setEditingDayIndex] = useState<number | null>(null);
     const [pollViewMode, setPollViewMode] = useState<'list' | 'calendar'>('list');
     const [previousView, setPreviousView] = useState<'home' | 'results' | 'poll' | 'profile'>('results');
-    const [pollCreatorId, setPollCreatorId] = useState<string | null>(null);
 
     // Update view helper to track history
     const navigateTo = (newView: 'home' | 'results' | 'poll' | 'profile') => {
@@ -1378,6 +1379,8 @@ export default function ClubBookingInterface({ user, initialPollId }: { user: Us
         const res = await createPoll(selectedSlots, targetVoters);
         if (res.id) {
             setPollId(res.id);
+            setPollCreatorId(user.id);
+            setPollCreatorName(profileFields.firstName || user.email?.split('@')[0] || 'Organisateur');
             navigateTo('poll');
         } else {
             console.error("Erreur création sondage:", res.error);
@@ -1407,11 +1410,17 @@ export default function ClubBookingInterface({ user, initialPollId }: { user: Us
 
     const handleDeletePoll = async () => {
         if (!pollId || !confirm('Supprimer ce sondage ? Cette action est irréversible.')) return;
-        await supabase.from('poll_votes').delete().eq('poll_id', pollId);
-        await supabase.from('poll_slots').delete().eq('poll_id', pollId);
-        await supabase.from('polls').delete().eq('id', pollId);
-        setPollId(null);
+        await deleteGeneralPoll(pollId);
         navigateTo('home');
+    };
+
+    const deleteGeneralPoll = async (id: string) => {
+        if (!confirm('Supprimer ce sondage ?')) return;
+        await supabase.from('poll_votes').delete().eq('poll_id', id);
+        await supabase.from('poll_slots').delete().eq('poll_id', id);
+        await supabase.from('polls').delete().eq('id', id);
+        setUserPolls(prev => prev.filter(p => p.id !== id));
+        if (pollId === id) setPollId(null);
     };
 
     const handleVote = async (slotId: string) => {
@@ -2155,16 +2164,36 @@ export default function ClubBookingInterface({ user, initialPollId }: { user: Us
                                 }
 
                                 const existing = pollVotes.find(v => v.slot_id === slotId && v.user_name === name);
-                                if (isChaud) {
-                                    if (!existing) {
-                                        const newVote = { poll_id: pollId, slot_id: slotId, user_name: name };
-                                        const { data, error } = await supabase.from('poll_votes').insert(newVote).select().single();
-                                        if (!error && data) setPollVotes(prev => [...prev, data]);
+
+                                if (existing && existing.vote_value === isChaud) {
+                                    // If clicking the same button again, do nothing or toggle?
+                                    // Let's toggle off if they click the same one again.
+                                    setPollVotes(prev => prev.filter(v => v.id !== existing.id));
+                                    await supabase.from('poll_votes').delete().eq('id', existing.id);
+                                    return;
+                                }
+
+                                const newVoteData = {
+                                    poll_id: pollId,
+                                    slot_id: slotId,
+                                    user_name: name,
+                                    vote_value: isChaud
+                                };
+
+                                if (existing) {
+                                    // Update existing
+                                    const { data, error } = await supabase.from('poll_votes').update(newVoteData).eq('id', existing.id).select().single();
+                                    if (!error && data) {
+                                        setPollVotes(prev => prev.map(v => v.id === existing.id ? data : v));
                                     }
                                 } else {
-                                    if (existing) {
-                                        setPollVotes(prev => prev.filter(v => v.id !== existing.id));
-                                        await supabase.from('poll_votes').delete().eq('id', existing.id);
+                                    // Insert new
+                                    const { data, error } = await supabase.from('poll_votes').insert(newVoteData).select().single();
+                                    if (!error && data) {
+                                        setPollVotes(prev => [...prev, data]);
+                                    } else {
+                                        // Local fallback
+                                        setPollVotes(prev => [...prev, { id: Math.random().toString(), ...newVoteData }]);
                                     }
                                 }
                             };
@@ -2177,48 +2206,78 @@ export default function ClubBookingInterface({ user, initialPollId }: { user: Us
                                 <>
                                     {/* STICKY HEADER */}
                                     <div style={{ position: 'sticky', top: 0, zIndex: 1000, background: '#fff', boxShadow: '0 4px 20px rgba(0,0,0,0.05)', padding: '0.75rem 0' }}>
-                                        <div style={{ maxWidth: 600, margin: '0 auto', padding: '0 1.25rem' }}>
-                                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem' }}>
-                                                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                                                    <div style={{ width: 32, height: 32, borderRadius: '50%', background: 'var(--sun-blaze)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.8rem', fontWeight: 950, color: '#fff' }}>
-                                                        {pollCreatorName[0]?.toUpperCase() || 'P'}
-                                                    </div>
-                                                    <div>
-                                                        <div style={{ fontSize: '0.7rem', fontWeight: 800, opacity: 0.5, textTransform: 'uppercase' }}>Match de</div>
-                                                        <div style={{ fontSize: '1rem', fontWeight: 950 }}>{pollCreatorName || 'Un pote'}</div>
-                                                    </div>
+                                        <div style={{ maxWidth: 1200, margin: '0 auto', padding: '0 1.25rem' }}>
+                                            {/* LOGO & BACK BAR */}
+                                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.75rem', paddingBottom: '0.75rem', borderBottom: '1px solid rgba(0,0,0,0.04)' }}>
+                                                <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontWeight: 950, fontSize: '1rem', textTransform: 'uppercase', cursor: 'pointer' }} onClick={() => navigateTo('home')}>
+                                                    <Zap fill="var(--sun-blaze)" stroke="none" size={20} /> PadelSpot
                                                 </div>
-                                                <div style={{ textAlign: 'right' }}>
-                                                    <div style={{ fontSize: '0.85rem', fontWeight: 950, color: voterCount >= targetVoters ? '#00C853' : 'var(--sun-blaze)' }}>
-                                                        {voterCount >= targetVoters ? 'MATCH COMPLET ! 🎾' : `Pénurie : ${targetVoters - voterCount} joueur${targetVoters - voterCount > 1 ? 's' : ''}`}
-                                                    </div>
-                                                    <div style={{ width: 100, height: 6, background: 'rgba(0,0,0,0.05)', borderRadius: 3, marginTop: 4, overflow: 'hidden', marginLeft: 'auto' }}>
-                                                        <motion.div initial={{ width: 0 }} animate={{ width: `${progress}%` }} style={{ height: '100%', background: voterCount >= targetVoters ? '#00C853' : 'var(--sun-blaze)' }} />
-                                                    </div>
-                                                </div>
-                                            </div>
-
-                                            {/* MINI CALENDAR */}
-                                            <div style={{ display: 'flex', gap: '0.5rem', overflowX: 'auto', padding: '0.5rem 0', scrollbarWidth: 'none' }}>
-                                                {['L', 'M', 'M', 'J', 'V', 'S', 'D'].map((dayChar, i) => {
-                                                    // This is a bit simplified for the display
-                                                    // Map these to the days in the poll if possible
-                                                    return (
-                                                        <div key={i} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px' }}>
-                                                            <div style={{ fontSize: '0.65rem', fontWeight: 900, opacity: 0.3 }}>{dayChar}</div>
-                                                            <div style={{ width: 4, height: 4, borderRadius: '50%', background: 'rgba(255,107,0,0.2)' }} />
+                                                <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                                                    {!isCreator && (
+                                                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                                            <div style={{ fontSize: '0.65rem', fontWeight: 800, opacity: 0.5, textTransform: 'uppercase' }}>Match de</div>
+                                                            <div style={{ fontSize: '0.85rem', fontWeight: 950 }}>{pollCreatorName || 'Un pote'}</div>
                                                         </div>
-                                                    );
-                                                })}
+                                                    )}
+                                                    <button
+                                                        onClick={() => (initialPollId ? router.push('/') : navigateTo('results'))}
+                                                        style={{ background: 'rgba(0,0,0,0.04)', border: 'none', color: 'var(--pitch-black)', padding: '0.4rem 0.8rem', borderRadius: '99px', fontWeight: 900, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.3rem', fontSize: '0.65rem' }}
+                                                    >
+                                                        <ChevronLeft size={14} /> RETOUR
+                                                    </button>
+                                                </div>
                                             </div>
 
-                                            {/* ACTIVE DAYS JUMP */}
+
+                                            {/* MINI CALENDAR - Functional dots */}
+                                            <div style={{ display: 'flex', gap: '1rem', overflowX: 'auto', padding: '1rem 0', scrollbarWidth: 'none', WebkitOverflowScrolling: 'touch' }}>
+                                                {(() => {
+                                                    const today = new Date();
+                                                    // Start from today or beginning of current week? Let's stay with 14 days from today for polls.
+                                                    return Array.from({ length: 14 }, (_, i) => {
+                                                        const d = addDays(today, i);
+                                                        const dKey = format(d, 'yyyy-MM-dd');
+                                                        const hasActiveSlots = !!slotsByDay[dKey];
+                                                        const isToday = isSameDay(d, today);
+
+                                                        return (
+                                                            <div
+                                                                key={i}
+                                                                onClick={() => hasActiveSlots && scrollToDay(dKey)}
+                                                                style={{
+                                                                    display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '6px',
+                                                                    minWidth: '70px', cursor: hasActiveSlots ? 'pointer' : 'default',
+                                                                    opacity: hasActiveSlots ? 1 : 0.2
+                                                                }}
+                                                            >
+                                                                <div style={{ fontSize: '0.6rem', fontWeight: 900, color: isToday ? 'var(--sun-blaze)' : 'inherit' }}>
+                                                                    {format(d, 'EEEE', { locale: fr }).toUpperCase()}
+                                                                </div>
+                                                                <div style={{ fontSize: '1rem', fontWeight: 950 }}>
+                                                                    {format(d, 'd')}
+                                                                </div>
+                                                                <div
+                                                                    style={{
+                                                                        width: 8, height: 8, borderRadius: '50%',
+                                                                        background: hasActiveSlots ? 'var(--sun-blaze)' : 'rgba(0,0,0,0.1)',
+                                                                        transform: hasActiveSlots ? 'scale(1.2)' : 'scale(1)',
+                                                                        transition: 'all 0.2s',
+                                                                        marginTop: '4px'
+                                                                    }}
+                                                                />
+                                                            </div>
+                                                        );
+                                                    });
+                                                })()}
+                                            </div>
+
+                                            {/* ACTIVE DAYS JUMP PILLS */}
                                             <div style={{ display: 'flex', gap: '0.75rem', overflowX: 'auto', padding: '0.5rem 0', scrollbarWidth: 'none' }}>
                                                 {activeDays.map(dayKey => (
                                                     <button
                                                         key={dayKey}
                                                         onClick={() => scrollToDay(dayKey)}
-                                                        style={{ background: 'rgba(0,0,0,0.04)', border: 'none', padding: '0.4rem 0.8rem', borderRadius: '99px', fontSize: '0.65rem', fontWeight: 900, whiteSpace: 'nowrap', color: 'var(--pitch-black)' }}
+                                                        style={{ background: 'rgba(0,0,0,0.04)', border: 'none', padding: '0.5rem 1rem', borderRadius: '99px', fontSize: '0.75rem', fontWeight: 900, whiteSpace: 'nowrap', color: 'var(--pitch-black)' }}
                                                     >
                                                         {format(parseISO(dayKey), 'eee d MMM', { locale: fr }).toUpperCase()}
                                                     </button>
@@ -2227,7 +2286,88 @@ export default function ClubBookingInterface({ user, initialPollId }: { user: Us
                                         </div>
                                     </div>
 
-                                    <div style={{ maxWidth: 600, margin: '2rem auto', padding: '0 1.25rem' }}>
+                                    <div style={{ maxWidth: 1200, margin: '2rem auto', padding: '0 1.25rem' }}>
+                                        {/* CREATOR DASHBOARD - HIGHLIGHTED COUNTER SINGLE LINE */}
+                                        {isCreator && (
+                                            <div style={{
+                                                background: 'var(--pitch-black)',
+                                                borderRadius: '1.25rem',
+                                                padding: '0.75rem 1.25rem',
+                                                marginBottom: '2rem',
+                                                color: '#fff',
+                                                boxShadow: '0 10px 30px rgba(0,0,0,0.15)',
+                                                position: 'relative',
+                                                overflow: 'hidden',
+                                                display: 'flex',
+                                                alignItems: 'center',
+                                                justifyContent: 'space-between',
+                                                gap: '1.5rem'
+                                            }}>
+                                                <div style={{ display: 'flex', alignItems: 'center', gap: '1.25rem' }}>
+                                                    {/* Prominent Counter Pill */}
+                                                    <div style={{
+                                                        background: 'rgba(255,255,255,0.08)',
+                                                        padding: '0.5rem 0.75rem',
+                                                        borderRadius: '0.8rem',
+                                                        border: '1px solid rgba(255,255,255,0.1)',
+                                                        textAlign: 'center',
+                                                        minWidth: '85px'
+                                                    }}>
+                                                        <div style={{ fontSize: '0.9rem', fontWeight: 950, color: 'var(--sun-blaze)', lineHeight: 1 }}>{voterCount} / {targetVoters}</div>
+                                                        <div style={{ fontSize: '0.55rem', fontWeight: 900, opacity: 0.5, textTransform: 'uppercase', marginTop: '0.2rem', letterSpacing: '0.02em' }}>Réponses</div>
+                                                    </div>
+
+                                                    <div style={{ textAlign: 'left' }}>
+                                                        <div style={{ fontSize: '0.95rem', fontWeight: 950, letterSpacing: '-0.01em', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                                                            Invite tes potes ! 🎾
+                                                        </div>
+                                                        <p style={{ fontSize: '0.75rem', opacity: 0.4, margin: 0 }}>Partage sur WhatsApp pour remplir le match rapidement.</p>
+                                                    </div>
+                                                </div>
+
+                                                <div style={{ display: 'flex', gap: '0.6rem', alignItems: 'center' }}>
+                                                    {friends.length > 0 && friends.slice(0, 2).map(f => (
+                                                        <button
+                                                            key={f.id}
+                                                            onClick={() => {
+                                                                const baseUrl = `${window.location.origin}/poll/${pollId}`;
+                                                                const magicUrl = `${baseUrl}?guest=${encodeURIComponent(f.friend_name)}`;
+                                                                const text = `Salut ${f.friend_name} ! On organise un Padel. Vote pour tes dispos ici : ${magicUrl}`;
+                                                                window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, '_blank');
+                                                            }}
+                                                            style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.05)', padding: '0.5rem 0.8rem', borderRadius: '0.8rem', fontSize: '0.65rem', fontWeight: 900, color: 'rgba(255,255,255,0.7)', cursor: 'pointer', whiteSpace: 'nowrap' }}
+                                                        >
+                                                            {f.friend_name}
+                                                        </button>
+                                                    ))}
+
+                                                    <button
+                                                        onClick={() => {
+                                                            const url = `${window.location.origin}/poll/${pollId}`;
+                                                            navigator.clipboard.writeText(url);
+                                                            alert("Lien copié !");
+                                                        }}
+                                                        style={{
+                                                            background: 'var(--sun-blaze)',
+                                                            color: '#fff',
+                                                            border: 'none',
+                                                            padding: '0.65rem 1.25rem',
+                                                            borderRadius: '0.9rem',
+                                                            fontWeight: 950,
+                                                            fontSize: '0.8rem',
+                                                            cursor: 'pointer',
+                                                            display: 'flex',
+                                                            alignItems: 'center',
+                                                            gap: '0.5rem',
+                                                            boxShadow: '0 5px 15px rgba(255,107,0,0.2)',
+                                                            whiteSpace: 'nowrap'
+                                                        }}
+                                                    >
+                                                        <Share2 size={14} /> COPIER LE LIEN
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        )}
                                         {Object.entries(slotsByDay).map(([dayKey, daySlots]: [string, any]) => (
                                             <div key={dayKey} id={`poll-day-${dayKey}`} style={{ marginBottom: '2.5rem' }}>
                                                 <div style={{ fontSize: '0.75rem', fontWeight: 950, textTransform: 'uppercase', color: 'rgba(0,0,0,0.3)', marginBottom: '1rem', letterSpacing: '0.05em' }}>
@@ -2236,9 +2376,16 @@ export default function ClubBookingInterface({ user, initialPollId }: { user: Us
 
                                                 <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
                                                     {daySlots.map((slot: any) => {
-                                                        const votes = pollVotes.filter(v => v.slot_id === slot.id);
+                                                        const dbVotes = pollVotes.filter(v => v.slot_id === slot.id);
+                                                        // Inject creator vote if not present
+                                                        let votes = [...dbVotes];
+                                                        const creatorInVotes = votes.find(v => v.user_name === pollCreatorName);
+                                                        if (!creatorInVotes) {
+                                                            votes = [{ user_name: pollCreatorName, vote_value: true }, ...votes];
+                                                        }
+
                                                         const name = user ? (profileFields.firstName || user.email?.split('@')[0]) : voterName;
-                                                        const hasVoted = votes.some(v => v.user_name === name);
+                                                        const hasVoted = dbVotes.some(v => v.user_name === name);
 
                                                         return (
                                                             <div key={slot.id} style={{ background: '#fff', borderRadius: '1.75rem', padding: '1.5rem', boxShadow: '0 10px 30px rgba(0,0,0,0.03)', border: '1px solid rgba(0,0,0,0.02)' }}>
@@ -2249,66 +2396,75 @@ export default function ClubBookingInterface({ user, initialPollId }: { user: Us
                                                                         <div style={{ fontSize: '0.8rem', fontWeight: 900, color: 'var(--sun-blaze)', marginTop: '0.4rem' }}>{slot.price}€ / joueur</div>
                                                                     </div>
                                                                     <div style={{ display: 'flex', alignItems: 'center' }}>
-                                                                        {votes.slice(0, 4).map((v, i) => (
+                                                                        {votes.slice(0, 6).map((v, i) => (
                                                                             <div key={i} style={{
                                                                                 width: 34, height: 34, borderRadius: '50%',
-                                                                                background: `hsl(${(i * 137) % 360}, 70%, 50%)`,
+                                                                                background: v.vote_value === false ? '#eee' : `hsl(${(i * 137) % 360}, 70%, 50%)`,
                                                                                 border: '3px solid #fff',
                                                                                 marginLeft: i === 0 ? 0 : -12,
                                                                                 display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                                                                color: '#fff', fontSize: '0.7rem', fontWeight: 950,
+                                                                                color: v.vote_value === false ? '#aaa' : '#fff',
+                                                                                fontSize: '0.7rem', fontWeight: 950,
                                                                                 boxShadow: '0 4px 8px rgba(0,0,0,0.05)',
-                                                                                zIndex: 10 - i
+                                                                                zIndex: 10 - i,
+                                                                                position: 'relative',
+                                                                                textDecoration: v.vote_value === false ? 'line-through' : 'none',
+                                                                                opacity: v.vote_value === false ? 0.7 : 1
                                                                             }}>
-                                                                                {v.user_name[0].toUpperCase()}
+                                                                                {(v.user_name && v.user_name.length > 0) ? v.user_name[0].toUpperCase() : '?'}
+                                                                                {v.vote_value === false && (
+                                                                                    <div style={{ position: 'absolute', top: -2, right: -2, background: '#ff4444', borderRadius: '50%', width: 12, height: 12, display: 'flex', alignItems: 'center', justifyContent: 'center', border: '2px solid #fff' }}>
+                                                                                        <X size={8} color="#fff" strokeWidth={4} />
+                                                                                    </div>
+                                                                                )}
                                                                             </div>
                                                                         ))}
-                                                                        {votes.length > 4 && (
+                                                                        {votes.length > 6 && (
                                                                             <div style={{ width: 34, height: 34, borderRadius: '50%', background: 'rgba(0,0,0,0.05)', border: '3px solid #fff', marginLeft: -12, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.7rem', fontWeight: 950, color: 'rgba(0,0,0,0.4)', zIndex: 0 }}>
-                                                                                +{votes.length - 4}
+                                                                                +{votes.length - 6}
                                                                             </div>
                                                                         )}
                                                                         {votes.length === 0 && <div style={{ fontSize: '0.7rem', fontWeight: 800, opacity: 0.2, textTransform: 'uppercase' }}>Aucun vote</div>}
                                                                     </div>
                                                                 </div>
 
-                                                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
-                                                                    <button
-                                                                        onClick={() => handleQuickVote(slot.id, true)}
-                                                                        style={{
-                                                                            background: hasVoted ? 'var(--sun-blaze)' : 'rgba(0,0,0,0.03)',
-                                                                            color: hasVoted ? '#fff' : 'var(--pitch-black)',
-                                                                            border: 'none',
-                                                                            padding: '1rem',
-                                                                            borderRadius: '1.25rem',
-                                                                            fontWeight: 950,
-                                                                            fontSize: '0.85rem',
-                                                                            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem',
-                                                                            cursor: 'pointer',
-                                                                            transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
-                                                                            transform: hasVoted ? 'scale(1.02)' : 'scale(1)',
-                                                                            boxShadow: hasVoted ? '0 10px 20px rgba(255,107,0,0.15)' : 'none'
-                                                                        }}
-                                                                    >
-                                                                        <Check size={18} strokeWidth={3} /> CHAUD
-                                                                    </button>
-                                                                    <button
-                                                                        onClick={() => handleQuickVote(slot.id, false)}
-                                                                        style={{
-                                                                            background: 'rgba(0,0,0,0.03)',
-                                                                            color: 'rgba(0,0,0,0.3)',
-                                                                            border: 'none',
-                                                                            padding: '1rem',
-                                                                            borderRadius: '1.25rem',
-                                                                            fontWeight: 950,
-                                                                            fontSize: '0.85rem',
-                                                                            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem',
-                                                                            cursor: 'pointer'
-                                                                        }}
-                                                                    >
-                                                                        <X size={18} strokeWidth={3} /> PAS DISPO
-                                                                    </button>
-                                                                </div>
+                                                                {!isCreator && (
+                                                                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
+                                                                        <button
+                                                                            onClick={() => handleQuickVote(slot.id, true)}
+                                                                            style={{
+                                                                                background: hasVoted && votes.find(v => v.user_name === name)?.vote_value === true ? 'var(--sun-blaze)' : 'rgba(0,0,0,0.03)',
+                                                                                color: hasVoted && votes.find(v => v.user_name === name)?.vote_value === true ? '#fff' : 'var(--pitch-black)',
+                                                                                border: 'none',
+                                                                                padding: '1rem',
+                                                                                borderRadius: '1.25rem',
+                                                                                fontWeight: 950,
+                                                                                fontSize: '0.85rem',
+                                                                                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem',
+                                                                                cursor: 'pointer',
+                                                                                transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)'
+                                                                            }}
+                                                                        >
+                                                                            <Check size={18} strokeWidth={3} /> CHAUD
+                                                                        </button>
+                                                                        <button
+                                                                            onClick={() => handleQuickVote(slot.id, false)}
+                                                                            style={{
+                                                                                background: hasVoted && votes.find(v => v.user_name === name)?.vote_value === false ? '#ff4444' : 'rgba(0,0,0,0.03)',
+                                                                                color: hasVoted && votes.find(v => v.user_name === name)?.vote_value === false ? '#fff' : 'rgba(0,0,0,0.3)',
+                                                                                border: 'none',
+                                                                                padding: '1rem',
+                                                                                borderRadius: '1.25rem',
+                                                                                fontWeight: 950,
+                                                                                fontSize: '0.85rem',
+                                                                                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem',
+                                                                                cursor: 'pointer'
+                                                                            }}
+                                                                        >
+                                                                            <X size={18} strokeWidth={3} /> PAS DISPO
+                                                                        </button>
+                                                                    </div>
+                                                                )}
                                                             </div>
                                                         );
                                                     })}
@@ -2316,46 +2472,6 @@ export default function ClubBookingInterface({ user, initialPollId }: { user: Us
                                             </div>
                                         ))}
 
-                                        {/* SHARE BANNER */}
-                                        <div style={{ background: 'var(--pitch-black)', borderRadius: '2rem', padding: '2.5rem', marginTop: '4rem', color: '#fff', textAlign: 'center' }}>
-                                            <div style={{ fontSize: '1.25rem', fontWeight: 950, marginBottom: '0.5rem' }}>Invite tes potes ! 🎾</div>
-                                            <p style={{ fontSize: '0.85rem', opacity: 0.6, marginBottom: '1.5rem' }}>Partage ce lien sur WhatsApp pour remplir le match rapidement.</p>
-
-                                            <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem', alignItems: 'center' }}>
-                                                <button
-                                                    onClick={() => {
-                                                        const url = `${window.location.origin}/poll/${pollId}`;
-                                                        navigator.clipboard.writeText(url);
-                                                        alert("Lien copié !");
-                                                    }}
-                                                    style={{ background: 'var(--sun-blaze)', color: '#fff', border: 'none', padding: '1rem 2rem', borderRadius: '1.25rem', fontWeight: 950, fontSize: '0.9rem', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.6rem' }}
-                                                >
-                                                    <Share2 size={18} /> COPIER LE LIEN GÉNÉRAL
-                                                </button>
-
-                                                {isCreator && friends.length > 0 && (
-                                                    <div style={{ width: '100%', borderTop: '1px solid rgba(255,255,255,0.1)', paddingTop: '1.5rem' }}>
-                                                        <div style={{ fontSize: '0.65rem', fontWeight: 900, opacity: 0.4, textTransform: 'uppercase', marginBottom: '1rem', letterSpacing: '0.1em' }}>Envoyer un lien magique à :</div>
-                                                        <div style={{ display: 'flex', gap: '0.6rem', flexWrap: 'wrap', justifyContent: 'center' }}>
-                                                            {friends.map(f => (
-                                                                <button
-                                                                    key={f.id}
-                                                                    onClick={() => {
-                                                                        const baseUrl = `${window.location.origin}/poll/${pollId}`;
-                                                                        const magicUrl = `${baseUrl}?guest=${encodeURIComponent(f.friend_name)}`;
-                                                                        const text = `Salut ${f.friend_name} ! On organise un Padel. Vote pour tes dispos ici : ${magicUrl}`;
-                                                                        window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, '_blank');
-                                                                    }}
-                                                                    style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', padding: '0.6rem 1.2rem', borderRadius: '1rem', fontSize: '0.75rem', fontWeight: 900, color: '#fff', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.4rem' }}
-                                                                >
-                                                                    <Zap size={12} fill="var(--sun-blaze)" stroke="none" /> {f.friend_name}
-                                                                </button>
-                                                            ))}
-                                                        </div>
-                                                    </div>
-                                                )}
-                                            </div>
-                                        </div>
                                     </div>
 
                                     {!user && (
@@ -2556,7 +2672,7 @@ export default function ClubBookingInterface({ user, initialPollId }: { user: Us
                                                 <div style={{ fontWeight: 900, fontSize: '1.1rem', marginBottom: '2rem', color: 'var(--pitch-black)' }}>Sondage {poll.id.slice(0, 8)}</div>
                                                 <div style={{ fontSize: '0.8rem', opacity: 0.4, fontWeight: 700 }}>Créé le {format(new Date(poll.created_at), 'd MMMM yyyy', { locale: fr })}</div>
                                             </div>
-                                            <div style={{ display: 'flex', gap: '4rem' }}>
+                                            <div style={{ display: 'flex', gap: '0.75rem' }}>
                                                 <button
                                                     onClick={() => { setPollId(poll.id); navigateTo('poll'); }}
                                                     style={{ background: 'var(--sun-blaze)', color: '#fff', border: 'none', padding: '0.6rem 1.25rem', borderRadius: '0.75rem', fontWeight: 900, fontSize: '0.75rem', cursor: 'pointer' }}
@@ -2569,6 +2685,12 @@ export default function ClubBookingInterface({ user, initialPollId }: { user: Us
                                                     }}
                                                     style={{ background: 'rgba(0,0,0,0.05)', color: 'var(--pitch-black)', border: 'none', padding: '0.6rem 1.25rem', borderRadius: '0.75rem', fontWeight: 900, fontSize: '0.75rem', cursor: 'pointer' }}
                                                 >PARTAGER</button>
+                                                <button
+                                                    onClick={() => deleteGeneralPoll(poll.id)}
+                                                    style={{ background: 'rgba(255,0,0,0.05)', color: '#ff4444', border: 'none', padding: '0.6rem', borderRadius: '0.75rem', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                                                >
+                                                    <Trash2 size={16} />
+                                                </button>
                                             </div>
                                         </div>
                                     ))}
