@@ -2271,18 +2271,6 @@ export default function ClubBookingInterface({ user, initialPollId }: { user: Us
                                                 })()}
                                             </div>
 
-                                            {/* ACTIVE DAYS JUMP PILLS */}
-                                            <div style={{ display: 'flex', gap: '0.75rem', overflowX: 'auto', padding: '0.5rem 0', scrollbarWidth: 'none' }}>
-                                                {activeDays.map(dayKey => (
-                                                    <button
-                                                        key={dayKey}
-                                                        onClick={() => scrollToDay(dayKey)}
-                                                        style={{ background: 'rgba(0,0,0,0.04)', border: 'none', padding: '0.5rem 1rem', borderRadius: '99px', fontSize: '0.75rem', fontWeight: 900, whiteSpace: 'nowrap', color: 'var(--pitch-black)' }}
-                                                    >
-                                                        {format(parseISO(dayKey), 'eee d MMM', { locale: fr }).toUpperCase()}
-                                                    </button>
-                                                ))}
-                                            </div>
                                         </div>
                                     </div>
 
