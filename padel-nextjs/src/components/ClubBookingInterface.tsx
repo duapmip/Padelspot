@@ -1127,34 +1127,48 @@ export default function ClubBookingInterface({ user, initialPollId }: { user: Us
         if (view === 'results') {
             const fetchSlots = async () => {
                 try {
-                    const sorted = [...selections].sort((a, b) => a.dayIndex - b.dayIndex);
-                    const firstDate = ALL_DAYS[sorted[0]?.dayIndex || 0].date;
-                    const lastDate = ALL_DAYS[sorted[sorted.length - 1]?.dayIndex || 0].date;
-                    const diff = Math.ceil((lastDate.getTime() - firstDate.getTime()) / (1000 * 60 * 60 * 24));
-
                     const fetchToday = startOfToday();
                     const fetchStartStr = fetchToday.toISOString();
                     const fetchEndStr = addDays(fetchToday, 21).toISOString();
 
                     console.log(`Fetching from Supabase from ${fetchStartStr} to ${fetchEndStr}`);
 
-                    const { data: supabaseSlots, error } = await supabase
-                        .from('slots')
-                        .select('*')
-                        .gte('start_time', fetchStartStr)
-                        .lte('start_time', fetchEndStr)
-                        .order('start_time', { ascending: true })
-                        .limit(5000);
+                    let allSupabaseSlots: any[] = [];
+                    let from = 0;
+                    let to = 999;
+                    let hasMore = true;
 
-                    console.log(`Supabase returned ${supabaseSlots?.length || 0} slots`);
+                    while (hasMore) {
+                        const { data, error } = await supabase
+                            .from('slots')
+                            .select('*')
+                            .gte('start_time', fetchStartStr)
+                            .lte('start_time', fetchEndStr)
+                            .order('start_time', { ascending: true })
+                            .range(from, to);
 
-                    if (error) {
-                        console.error('Error fetching Supabase slots:', error);
-                        setSlots([]);
-                        return;
+                        if (error) {
+                            console.error('Error fetching Supabase slots:', error);
+                            hasMore = false;
+                            break;
+                        }
+
+                        if (data && data.length > 0) {
+                            allSupabaseSlots = [...allSupabaseSlots, ...data];
+                            if (data.length < 1000) {
+                                hasMore = false;
+                            } else {
+                                from += 1000;
+                                to += 1000;
+                            }
+                        } else {
+                            hasMore = false;
+                        }
                     }
 
-                    const enrichedSlots = (supabaseSlots || []).map((slot: any) => {
+                    console.log(`Supabase returned total of ${allSupabaseSlots.length} slots (bypassed 1000 limit)`);
+
+                    const enrichedSlots = (allSupabaseSlots || []).map((slot: any) => {
                         let normalizedName = slot.center_name;
                         let coords = bordeauxCoordinates[slot.center_name];
                         if (!coords) {
