@@ -941,11 +941,11 @@ export default function ClubBookingInterface({ user, initialPollId }: { user: Us
     const [windowStart, setWindowStart] = useState(0);
     const [editingDayIndex, setEditingDayIndex] = useState<number | null>(null);
     const [pollViewMode, setPollViewMode] = useState<'list' | 'calendar'>('list');
-    const [previousView, setPreviousView] = useState<string>('results');
+    const [previousView, setPreviousView] = useState<'home' | 'results' | 'poll' | 'profile'>('results');
     const [pollCreatorId, setPollCreatorId] = useState<string | null>(null);
 
     // Update view helper to track history
-    const navigateTo = (newView: string) => {
+    const navigateTo = (newView: 'home' | 'results' | 'poll' | 'profile') => {
         setPreviousView(view);
         setView(newView);
     };
@@ -2098,19 +2098,6 @@ export default function ClubBookingInterface({ user, initialPollId }: { user: Us
                                             )}
                                         </div>
                                     </div>
-                                    <div style={{ textAlign: 'right' }}>
-                                        <div style={{ fontSize: '0.65rem', fontWeight: 950, opacity: 0.4, marginBottom: '2rem', textTransform: 'uppercase', letterSpacing: '0.1em' }}>Projet partagé</div>
-                                        <button
-                                            onClick={() => {
-                                                const url = `${window.location.origin}/poll/${pollId}`;
-                                                navigator.clipboard.writeText(url);
-                                                alert('Lien copié !');
-                                            }}
-                                            style={{ background: '#fff', border: '1px solid rgba(0,0,0,0.05)', padding: '0.8rem 1.5rem', borderRadius: '1.25rem', fontWeight: 950, fontSize: '0.75rem', display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer', boxShadow: '0 4px 12px rgba(0,0,0,0.02)' }}
-                                        >
-                                            <Share2 size={16} /> {pollId ? 'COPIER LE LIEN' : 'GÉNÉRER LE LIEN'}
-                                        </button>
-                                    </div>
                                 </div>
 
                                 {!user && (
@@ -2216,7 +2203,7 @@ export default function ClubBookingInterface({ user, initialPollId }: { user: Us
                                                     {renderCompactWeek('SEMAINE PROCHAINE', nextWeek)}
                                                 </div>
 
-                                                <div style={{ fontSize: '0.75rem', fontWeight: 950, opacity: 0.35, textTransform: 'uppercase', letterSpacing: '0.15em', marginBottom: '1.5rem' }}>Détail des créneaux</div>
+                                                <div style={{ fontSize: '0.75rem', fontWeight: 950, opacity: 0.35, textTransform: 'uppercase', letterSpacing: '0.15em', marginBottom: '0.5rem' }}>Détail des créneaux</div>
                                                 <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
                                                     {pSlots.sort((a, b) => a.startTime.getTime() - b.startTime.getTime()).map(slot => {
                                                         const votes = pollVotes.filter(v => v.slot_id === slot.id);
@@ -2227,12 +2214,10 @@ export default function ClubBookingInterface({ user, initialPollId }: { user: Us
                                                             <div key={slot.id} style={{ background: '#fff', padding: '1.2rem 2rem', borderRadius: '2rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between', boxShadow: '0 10px 30px rgba(0,0,0,0.02)', border: '1px solid rgba(0,0,0,0.03)' }}>
                                                                 <div style={{ display: 'flex', alignItems: 'center', gap: '2rem' }}>
                                                                     <div style={{ width: 8, height: 8, borderRadius: '50%', background: 'rgba(0,0,0,0.1)' }} />
-                                                                    <div>
-                                                                        <div style={{ display: 'flex', alignItems: 'baseline', gap: '0.75rem' }}>
-                                                                            <span style={{ fontSize: '1.5rem', fontWeight: 950, letterSpacing: '-0.02em' }}>{format(slot.startTime, 'HH:mm')}</span>
-                                                                            <span style={{ fontSize: '0.75rem', fontWeight: 900, opacity: 0.4, textTransform: 'uppercase' }}>{format(slot.startTime, 'eee d', { locale: fr })}</span>
-                                                                        </div>
-                                                                        <div style={{ fontSize: '0.85rem', fontWeight: 700, opacity: 0.5, marginTop: '0.2rem' }}>{slot.centerName}</div>
+                                                                    <div style={{ display: 'flex', alignItems: 'baseline', gap: '0.75rem' }}>
+                                                                        <span style={{ fontSize: '1.5rem', fontWeight: 950, letterSpacing: '-0.02em' }}>{format(slot.startTime, 'HH:mm')}</span>
+                                                                        <span style={{ fontSize: '0.75rem', fontWeight: 900, opacity: 0.4, textTransform: 'uppercase' }}>{format(slot.startTime, 'eee d', { locale: fr })}</span>
+                                                                        <span style={{ fontSize: '0.85rem', fontWeight: 700, opacity: 0.5 }}>{slot.centerName}</span>
                                                                     </div>
                                                                 </div>
 
