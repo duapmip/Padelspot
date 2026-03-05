@@ -990,8 +990,8 @@ export default function ClubBookingInterface({ user, initialPollId }: { user: Us
             if (!sel) return false;
 
             const selTotalMins = sel.hour * 60 + sel.minute;
-            // Loosen time match for debugging: +12 hours instead of +8
-            const isTimeMatch = (slotTotalMins >= selTotalMins - 60 && slotTotalMins <= selTotalMins + 720);
+            // Let's show everything from the selected hour until the end of that day (up to 18 hours later)
+            const isTimeMatch = (slotTotalMins >= selTotalMins - 60 && slotTotalMins <= selTotalMins + 1080);
 
             const isDurationMatch = durationFilter === 'all' || slot.durationMinutes === parseInt(durationFilter);
 
@@ -1143,7 +1143,8 @@ export default function ClubBookingInterface({ user, initialPollId }: { user: Us
                         .select('*')
                         .gte('start_time', fetchStartStr)
                         .lte('start_time', fetchEndStr)
-                        .order('start_time', { ascending: true });
+                        .order('start_time', { ascending: true })
+                        .limit(5000);
 
                     console.log(`Supabase returned ${supabaseSlots?.length || 0} slots`);
 
