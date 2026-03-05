@@ -946,9 +946,24 @@ export default function ClubBookingInterface({ user, initialPollId }: { user: Us
 
     // Update view helper to track history
     const navigateTo = (newView: 'home' | 'results' | 'poll' | 'profile') => {
+        // Entering poll: save current results selection, will be restored on return
+        if (newView === 'poll' && view !== 'poll') {
+            savedResultsSelection.current = selectedSlots;
+        }
+        // Leaving poll back to results: restore pre-poll selection
+        if (view === 'poll' && newView === 'results') {
+            setSelectedSlots(savedResultsSelection.current);
+        }
+        // Fresh search from home: clear selection
+        if (newView === 'results' && view === 'home') {
+            setSelectedSlots([]);
+        }
         setPreviousView(view);
         setView(newView);
     };
+
+    // Ref to preserve results selection when entering poll view
+    const savedResultsSelection = useRef<string[]>([]);
 
     // Refs
     const calbarRef = useRef<HTMLDivElement>(null);
