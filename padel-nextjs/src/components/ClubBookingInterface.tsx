@@ -1434,7 +1434,7 @@ export default function ClubBookingInterface({ user, initialPollId }: { user: Us
                                 <div style={{ fontFamily: 'var(--font-ui)', fontSize: '1.25rem', fontWeight: 900, marginBottom: '0.1rem', letterSpacing: '-0.02em' }}>{item.time}</div>
                                 {item.type === 'available' ? (
                                     <>
-                                        <div style={{ fontSize: '0.95rem', fontWeight: 400, opacity: 0.85 }}>{Math.min(...item.group.slots.map((s: any) => s.price))}€</div>
+                                        <div style={{ fontSize: '1.05rem', fontWeight: 800 }}>{Math.min(...item.group.slots.map((s: any) => s.price))}€</div>
                                         <div style={{ fontSize: '0.55rem', opacity: 0.6 }}>{item.group.slots.length} complexes</div>
                                     </>
                                 ) : (
@@ -1858,7 +1858,7 @@ export default function ClubBookingInterface({ user, initialPollId }: { user: Us
                                             <button className="cal-nav-btn" onClick={() => navigateCalendar('left')} disabled={windowStart === 0} style={{ opacity: windowStart === 0 ? 0.2 : 1 }}><ChevronLeft size={28} /></button>
                                         </div>
 
-                                        <div className="dp-calbar" style={{ flex: 1, display: 'flex', gap: '1.5rem', justifyContent: 'center' }}>
+                                        <div className="dp-calbar" style={{ flex: 1, display: 'flex', gap: '0.75rem', justifyContent: 'center' }}>
                                             {ALL_DAYS.slice(windowStart, windowStart + 7).map((d) => {
                                                 const absIdx = ALL_DAYS.findIndex(ad => ad.key === d.key);
                                                 const sel = selections.find(s => s.dayIndex === absIdx);
