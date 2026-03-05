@@ -1131,8 +1131,6 @@ export default function ClubBookingInterface({ user, initialPollId }: { user: Us
                     const fetchStartStr = fetchToday.toISOString();
                     const fetchEndStr = addDays(fetchToday, 21).toISOString();
 
-                    console.log(`Fetching from Supabase from ${fetchStartStr} to ${fetchEndStr}`);
-
                     let allSupabaseSlots: any[] = [];
                     let from = 0;
                     let to = 999;
@@ -1165,8 +1163,6 @@ export default function ClubBookingInterface({ user, initialPollId }: { user: Us
                             hasMore = false;
                         }
                     }
-
-                    console.log(`Supabase returned total of ${allSupabaseSlots.length} slots (bypassed 1000 limit)`);
 
                     const enrichedSlots = (allSupabaseSlots || []).map((slot: any) => {
                         let normalizedName = slot.center_name;
