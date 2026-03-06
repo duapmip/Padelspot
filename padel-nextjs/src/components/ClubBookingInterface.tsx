@@ -969,7 +969,7 @@ export default function ClubBookingInterface({ user, initialPollId }: { user: Us
     const [windowStart, setWindowStart] = useState(0);
     const [editingDayIndex, setEditingDayIndex] = useState<number | null>(null);
     const [pollViewMode, setPollViewMode] = useState<'list' | 'calendar'>('list');
-    const [previousView, setPreviousView] = useState<'home' | 'results' | 'poll' | 'profile'>('results');
+    const [previousView, setPreviousView] = useState<'home' | 'results' | 'poll' | 'profile' | 'dashboard'>('results');
 
     // Update view helper to track history
     const navigateTo = (newView: 'home' | 'results' | 'poll' | 'profile' | 'dashboard') => {
