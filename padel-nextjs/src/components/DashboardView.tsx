@@ -153,10 +153,10 @@ export default function DashboardView({ user, onNavigateToSearch, onViewPoll, on
                     slotDateMap[s.id] = s.start_time;
                 });
 
-                const processPolls = (rawPolls: any[], isCreator: boolean) => {
+                const processPolls = (rawPolls: any[], isCreator: boolean): Poll[] => {
                     return rawPolls.map(p => {
                         const chaudVotesBySlot: Record<string, number> = {};
-                        const uniqueVoters = new Set();
+                        const uniqueVoters = new Set<string>();
 
                         // Use poll.creator_name as the first voter
                         uniqueVoters.add(p.creator_name || 'Organisateur');
