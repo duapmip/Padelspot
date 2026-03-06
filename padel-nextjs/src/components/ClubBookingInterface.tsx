@@ -859,105 +859,110 @@ export default function ClubBookingInterface({ user, initialPollId }: { user: Us
         if (pollId && view === 'poll') {
             const fetchPollData = async () => {
                 // 0. Fetch poll details
-                const { data: pollData } = await supabase
+                const { data: pollData, error: pError } = await supabase
                     .from('polls')
                     .select('target_voters_count, user_id, created_by, creator_name')
                     .eq('id', pollId)
                     .single();
-                if (pollData) {
-                    setTargetVoters(pollData.target_voters_count);
-                    const creatorId = pollData.created_by || pollData.user_id;
-                    setPollCreatorId(creatorId);
 
-                    // Fetch Creator Name with better fallback
-                    const { data: creatorProf } = await supabase
-                        .from('profiles')
-                        .select('first_name, email')
-                        .eq('id', creatorId)
-                        .single();
+                if (pError || !pollData) {
+                    console.error("Error fetching poll:", pError);
+                    return;
+                }
 
-                    const bestName = pollData?.creator_name ||
-                        creatorProf?.first_name ||
-                        creatorProf?.email?.split('@')[0] ||
-                        (user && creatorId === user.id ? (profileFields.firstName || user.email?.split('@')[0]) : null);
+                setTargetVoters(pollData.target_voters_count);
+                const creatorId = pollData.created_by || pollData.user_id;
+                setPollCreatorId(creatorId);
 
-                    if (bestName) setPollCreatorName(bestName);
+                // Fetch Creator Name with better fallback
+                const { data: creatorProf } = await supabase
+                    .from('profiles')
+                    .select('first_name, email')
+                    .eq('id', creatorId)
+                    .single();
 
-                    // Show name prompt for guests if not already set
-                    if (!user && !voterName) {
-                        setShowGuestNameModal(true);
-                    }
+                const bestName = pollData?.creator_name ||
+                    creatorProf?.first_name ||
+                    creatorProf?.email?.split('@')[0] ||
+                    (user && creatorId === user.id ? (profileFields.firstName || user.email?.split('@')[0]) : null);
 
-                    // 1. Fetch slots IDs for this poll
-                    const { data: psData, error: psError } = await supabase
-                        .from('poll_slots')
-                        .select('slot_id')
-                        .eq('poll_id', pollId);
+                if (bestName) setPollCreatorName(bestName);
 
-                    if (psError || !psData) return;
-                    const ids = psData.map((ps: any) => ps.slot_id);
-                    setSelectedSlots(ids);
+                // Show name prompt for guests if not already set
+                if (!user && !voterName) {
+                    setShowGuestNameModal(true);
+                }
 
-                    // 2. Fetch full details for these slots (if not already in slots state)
-                    const { data: sData } = await supabase
-                        .from('slots')
-                        .select('*')
-                        .in('id', ids);
+                // 1. Fetch slots IDs for this poll
+                const { data: psData, error: psError } = await supabase
+                    .from('poll_slots')
+                    .select('slot_id')
+                    .eq('poll_id', pollId);
 
-                    if (sData) {
-                        const enriched = sData.map((slot: any) => {
-                            let normalizedName = slot.center_name;
-                            let coords = bordeauxCoordinates[slot.center_name];
-                            if (!coords) {
-                                const entry = Object.entries(bordeauxCoordinates).find(([key]) =>
-                                    slot.center_name.toUpperCase().includes(key.toUpperCase()) ||
-                                    key.toUpperCase().includes(slot.center_name.toUpperCase())
-                                );
-                                if (entry) {
-                                    coords = entry[1];
-                                    normalizedName = entry[0];
-                                }
+                if (psError || !psData) return;
+                const ids = psData.map((ps: any) => ps.slot_id);
+                setSelectedSlots(ids);
+
+                // 2. Fetch full details for these slots (independently)
+                const { data: sData, error: sError } = await supabase
+                    .from('slots')
+                    .select('*')
+                    .in('id', ids);
+
+                if (sData) {
+                    const enriched = sData.map((slot: any) => {
+                        let normalizedName = slot.center_name;
+                        let coords = bordeauxCoordinates[slot.center_name];
+                        if (!coords) {
+                            const entry = Object.entries(bordeauxCoordinates).find(([key]) =>
+                                slot.center_name.toUpperCase().includes(key.toUpperCase()) ||
+                                key.toUpperCase().includes(slot.center_name.toUpperCase())
+                            );
+                            if (entry) {
+                                coords = entry[1];
+                                normalizedName = entry[0];
                             }
-                            return {
-                                id: slot.id,
-                                provider: slot.provider,
-                                centerName: normalizedName,
-                                courtName: slot.court_name,
-                                startTime: new Date(slot.start_time),
-                                endTime: new Date(slot.end_time),
-                                durationMinutes: slot.duration_minutes,
-                                price: parseFloat(slot.price),
-                                currency: slot.currency,
-                                bookingUrl: slot.booking_url,
-                                lat: coords?.[0] || 44.84,
-                                lng: coords?.[1] || -0.57
-                            };
-                        });
-                        setSlots(prev => {
-                            const existingIds = new Set(prev.map(s => s.id));
-                            const news = enriched.filter(s => !existingIds.has(s.id));
-                            return [...prev, ...news];
-                        });
-                    }
+                        }
+                        return {
+                            id: slot.id,
+                            provider: slot.provider,
+                            centerName: normalizedName,
+                            courtName: slot.court_name,
+                            startTime: new Date(slot.start_time),
+                            endTime: new Date(slot.end_time),
+                            durationMinutes: slot.duration_minutes,
+                            price: parseFloat(slot.price),
+                            currency: slot.currency,
+                            bookingUrl: slot.booking_url,
+                            lat: coords?.[0] || 44.84,
+                            lng: coords?.[1] || -0.57
+                        };
+                    });
+                    setSlots(prev => {
+                        const existingIds = new Set(prev.map(s => s.id));
+                        const news = enriched.filter(s => !existingIds.has(s.id));
+                        return [...prev, ...news];
+                    });
+                } else if (sError) {
+                    console.error("Error fetching slots details:", sError);
+                }
 
-                    // 3. Fetch Votes
-                    const { data: vData } = await supabase
-                        .from('poll_votes')
-                        .select('*')
-                        .eq('poll_id', pollId);
+                // 3. Fetch Votes
+                const { data: vData } = await supabase
+                    .from('poll_votes')
+                    .select('*')
+                    .eq('poll_id', pollId);
 
-                    if (vData) {
-                        setPollVotes(vData);
-                        // Try to extract creator name from votes if we still have 'Organisateur'
-                        const creatorVote = vData.find(v => v.user_id === creatorId);
-                        if (creatorVote?.user_name) {
-                            setPollCreatorName(creatorVote.user_name);
-                        } else if (!creatorProf && !user) {
-                            // In incognito, if we still have nothing, try to find ANY vote with that user_id
-                            const firstVote = vData[0];
-                            if (firstVote?.user_name && firstVote.user_id === creatorId) {
-                                setPollCreatorName(firstVote.user_name);
-                            }
+                if (vData) {
+                    setPollVotes(vData);
+                    // Try to extract creator name from votes if we still have 'Organisateur'
+                    const creatorVote = vData.find(v => v.user_id === creatorId);
+                    if (creatorVote?.user_name) {
+                        setPollCreatorName(creatorVote.user_name);
+                    } else if (!creatorProf && !user) {
+                        const firstVote = vData[0];
+                        if (firstVote?.user_name && firstVote.user_id === creatorId) {
+                            setPollCreatorName(firstVote.user_name);
                         }
                     }
                 }
@@ -2214,17 +2219,18 @@ export default function ClubBookingInterface({ user, initialPollId }: { user: Us
                             uniqueVotersSet.add(pollCreatorName);
                             const voterCount = uniqueVotersSet.size;
 
-                            // Progress is based on the most popular slot (at least 4 votes as per user request)
                             const chaudVotesBySlot: Record<string, number> = {};
 
-                            // Include DB votes
                             pollVotes.filter(v => v.vote_value === true).forEach(v => {
                                 chaudVotesBySlot[v.slot_id] = (chaudVotesBySlot[v.slot_id] || 0) + 1;
                             });
 
-                            // Always include creator as a 'Chaud' vote for every slot
+                            // Ensure creator is counted for all slots IF not already in pollVotes
                             pSlots.forEach(s => {
-                                chaudVotesBySlot[s.id] = (chaudVotesBySlot[s.id] || 0) + 1;
+                                const creatorVoted = pollVotes.some(v => v.slot_id === s.id && v.user_name === pollCreatorName);
+                                if (!creatorVoted) {
+                                    chaudVotesBySlot[s.id] = (chaudVotesBySlot[s.id] || 0) + 1;
+                                }
                             });
 
                             const maxVotesOnASlot = Math.max(0, ...Object.values(chaudVotesBySlot));
