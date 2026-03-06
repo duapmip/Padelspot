@@ -2455,6 +2455,26 @@ export default function ClubBookingInterface({ user, initialPollId }: { user: Us
                                                     >
                                                         <Share2 size={14} /> COPIER LE LIEN
                                                     </button>
+
+                                                    <button
+                                                        onClick={(e) => { e.stopPropagation(); if (window.confirm('Es-tu sûr de vouloir supprimer ce sondage ? Cette action est irréversible.')) handleDeletePoll(); }}
+                                                        style={{
+                                                            background: 'rgba(255,0,0,0.1)',
+                                                            color: '#ff4444',
+                                                            border: 'none',
+                                                            padding: '0.65rem 0.65rem',
+                                                            borderRadius: '0.9rem',
+                                                            cursor: 'pointer',
+                                                            display: 'flex',
+                                                            alignItems: 'center',
+                                                            justifyContent: 'center',
+                                                            transition: 'all 0.2s'
+                                                        }}
+                                                        onMouseOver={e => e.currentTarget.style.background = 'rgba(255,0,0,0.2)'}
+                                                        onMouseOut={e => e.currentTarget.style.background = 'rgba(255,0,0,0.1)'}
+                                                    >
+                                                        <Trash2 size={16} />
+                                                    </button>
                                                 </div>
                                             </div>
                                         )}
@@ -2544,7 +2564,7 @@ export default function ClubBookingInterface({ user, initialPollId }: { user: Us
                                                                             );
                                                                         })}
                                                                         {votes.length > 6 && (
-                                                                            <div style={{ width: 34, height: 34, borderRadius: '50%', background: 'rgba(0,0,0,0.05)', border: '3px solid #fff', marginLeft: -12, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.7rem', fontWeight: 950, color: 'rgba(0,0,0,0.4)', zIndex: 0 }}>
+                                                                            <div style={{ width: 34, height: 34, borderRadius: '50%', background: 'rgba(0,0,0,0.05)', border: '3px solid #fff', marginLeft: -12, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.7rem', fontWeight: 800, color: 'rgba(0,0,0,0.4)', zIndex: 0 }}>
                                                                                 +{votes.length - 6}
                                                                             </div>
                                                                         )}
@@ -2618,14 +2638,14 @@ export default function ClubBookingInterface({ user, initialPollId }: { user: Us
                                                     onClick={(e) => { e.stopPropagation(); if (!isSaving) saveVotes(); }}
                                                     disabled={isSaving}
                                                     style={{
-                                                        background: saveSuccess ? '#2E7D32' : '#FF6B00',
+                                                        background: saveSuccess ? '#2E7D32' : 'var(--pitch-black)',
                                                         color: '#fff',
                                                         border: 'none',
                                                         padding: '1.25rem 3rem',
                                                         borderRadius: '2rem',
                                                         fontWeight: 950,
                                                         fontSize: '1.1rem',
-                                                        boxShadow: '0 20px 60px rgba(255,107,0,0.4)',
+                                                        boxShadow: '0 20px 60px rgba(0,0,0,0.2)',
                                                         cursor: isSaving ? 'default' : 'pointer',
                                                         display: 'flex',
                                                         alignItems: 'center',
@@ -2633,7 +2653,7 @@ export default function ClubBookingInterface({ user, initialPollId }: { user: Us
                                                         transition: 'all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275)',
                                                         pointerEvents: 'auto',
                                                         transform: 'scale(1)',
-                                                        borderBottom: '4px solid rgba(0,0,0,0.2)'
+                                                        borderBottom: '4px solid rgba(0,0,0,0.3)'
                                                     }}
                                                     onMouseOver={e => e.currentTarget.style.transform = 'scale(1.05) translateY(-5px)'}
                                                     onMouseOut={e => e.currentTarget.style.transform = 'scale(1) translateY(0)'}
