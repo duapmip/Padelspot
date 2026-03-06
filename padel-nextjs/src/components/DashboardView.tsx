@@ -48,6 +48,8 @@ interface Poll {
     created_at: string;
     target_voters_count: number;
     votes_count: number;
+    voters: string[];
+    slot_dates: Date[];
     creator_name: string;
     is_ready_to_book: boolean;
     is_validated: boolean;
