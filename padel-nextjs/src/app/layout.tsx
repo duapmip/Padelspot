@@ -5,6 +5,10 @@ import "./globals.css";
 export const metadata: Metadata = {
   title: "PadelSpot",
   description: "Recherche et réservation de terrains de Padel, simplifiées.",
+  icons: {
+    icon: "/icon.png",
+    apple: "/icon.png",
+  },
 };
 
 export default function RootLayout({
