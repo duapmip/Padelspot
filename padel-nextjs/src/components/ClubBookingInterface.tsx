@@ -19,7 +19,10 @@ import gsap from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import { supabase } from '../utils/supabase/client';
 import { User } from '@supabase/supabase-js';
+import DatePicker from 'react-datepicker';
+import 'react-datepicker/dist/react-datepicker.css';
 import { logout, createPoll } from '@/app/auth/actions';
+import DashboardView from './DashboardView';
 import './ClubBookingInterface.css';
 
 // Dynamic imports for Leaflet (SSR-incompatible)
@@ -792,7 +795,18 @@ export default function ClubBookingInterface({ user, initialPollId }: { user: Us
     const guestNameParam = searchParams.get('guest');
 
     // --- STATE ---
-    const [view, setView] = useState<'home' | 'results' | 'poll' | 'profile'>(initialPollId ? 'poll' : 'home');
+    const [view, setView] = useState<'home' | 'results' | 'poll' | 'profile' | 'dashboard'>(
+        initialPollId ? 'poll' : (user ? 'dashboard' : 'home')
+    );
+
+    // Strict separation: if logged in, never show home. If not, never show dashboard.
+    useEffect(() => {
+        if (user && view === 'home') {
+            setView('dashboard');
+        } else if (!user && view === 'dashboard') {
+            setView('home');
+        }
+    }, [user, view]);
     const [slots, setSlots] = useState<Slot[]>([]);
     const [selectedSlots, setSelectedSlots] = useState<string[]>([]);
     const [favorites, setFavorites] = useState<string[]>([]);
@@ -958,21 +972,24 @@ export default function ClubBookingInterface({ user, initialPollId }: { user: Us
     const [previousView, setPreviousView] = useState<'home' | 'results' | 'poll' | 'profile'>('results');
 
     // Update view helper to track history
-    const navigateTo = (newView: 'home' | 'results' | 'poll' | 'profile') => {
-        // Entering poll: save current results selection, will be restored on return
-        if (newView === 'poll' && view !== 'poll') {
+    const navigateTo = (newView: 'home' | 'results' | 'poll' | 'profile' | 'dashboard') => {
+        let targetView = newView;
+
+        // Block invalid transitions
+        if (user && targetView === 'home') targetView = 'dashboard';
+        if (!user && targetView === 'dashboard') targetView = 'home';
+
+        if (targetView === 'poll' && view !== 'poll') {
             savedResultsSelection.current = selectedSlots;
         }
-        // Leaving poll back to results: restore pre-poll selection
-        if (view === 'poll' && newView === 'results') {
+        if (view === 'poll' && (targetView === 'results' || targetView === 'dashboard')) {
             setSelectedSlots(savedResultsSelection.current);
         }
-        // Fresh search from home: clear selection
-        if (newView === 'results' && view === 'home') {
+        if (targetView === 'results' && (view === 'home' || view === 'dashboard')) {
             setSelectedSlots([]);
         }
         setPreviousView(view);
-        setView(newView);
+        setView(targetView);
     };
 
     // Ref to preserve results selection when entering poll view
@@ -1411,7 +1428,7 @@ export default function ClubBookingInterface({ user, initialPollId }: { user: Us
     const handleDeletePoll = async () => {
         if (!pollId || !confirm('Supprimer ce sondage ? Cette action est irréversible.')) return;
         await deleteGeneralPoll(pollId);
-        navigateTo('home');
+        navigateTo(user ? 'dashboard' : 'home');
     };
 
     const deleteGeneralPoll = async (id: string) => {
@@ -1516,6 +1533,19 @@ export default function ClubBookingInterface({ user, initialPollId }: { user: Us
             <div className="bg-grain-overlay" />
 
             <AnimatePresence mode="wait">
+                {view === 'dashboard' && user && (
+                    <motion.div key="dashboard" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+                        <DashboardView
+                            user={user}
+                            onNavigateToSearch={() => navigateTo('results')}
+                            onViewPoll={(id) => { setPollId(id); navigateTo('poll'); }}
+                            onNavigateToSettings={() => navigateTo('profile')}
+                            selections={selections}
+                            setSelections={setSelections}
+                        />
+                    </motion.div>
+                )}
+
                 {view === 'home' && (
                     <motion.div key="home" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
 
@@ -1541,7 +1571,7 @@ export default function ClubBookingInterface({ user, initialPollId }: { user: Us
                                     {user ? (
                                         <div style={{ display: 'flex', alignItems: 'center' }}>
                                             <button
-                                                onClick={() => navigateTo('profile')}
+                                                onClick={() => navigateTo('dashboard')}
                                                 style={{
                                                     width: 42, height: 42, borderRadius: '14px',
                                                     background: 'var(--sun-blaze)', color: '#fff', border: 'none',
@@ -1651,7 +1681,7 @@ export default function ClubBookingInterface({ user, initialPollId }: { user: Us
                                                 initial={{ opacity: 0, y: 10 }}
                                                 animate={{ opacity: 1, y: 0 }}
                                                 exit={{ opacity: 0, y: 10 }}
-                                                style={{ position: 'absolute', top: '120%', left: '50%', transform: 'translateX(-50%)', background: '#fff', borderRadius: '1.5rem', padding: '1.5rem', width: '380px', boxShadow: '0 20px 40px rgba(0,0,0,0.2)', display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: '0.4rem', border: '1px solid rgba(0,0,0,0.05)' }}
+                                                style={{ position: 'absolute', top: '120%', left: '50%', transform: 'translateX(-50%)', background: '#fff', borderRadius: '1.5rem', padding: '1.5rem', width: '380px', boxShadow: '0 20px 40px rgba(0,0,0,0.2)', display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: '0.4rem', border: '1px solid rgba(0,0,0,0.05)', zIndex: 10001 }}
                                             >
                                                 {['L', 'M', 'M', 'J', 'V', 'S', 'D'].map((dayStr, i) => (
                                                     <div key={i} style={{ textAlign: 'center', fontSize: '0.65rem', fontWeight: 900, color: '#aaa', marginBottom: '2rem' }}>{dayStr}</div>
@@ -1677,7 +1707,7 @@ export default function ClubBookingInterface({ user, initialPollId }: { user: Us
                                                 initial={{ opacity: 0, y: 10 }}
                                                 animate={{ opacity: 1, y: 0 }}
                                                 exit={{ opacity: 0, y: 10 }}
-                                                style={{ position: 'absolute', top: '120%', right: '10%', background: '#fff', borderRadius: '1.5rem', padding: '1.5rem', width: '280px', boxShadow: '0 20px 40px rgba(0,0,0,0.2)', display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '0.5rem', border: '1px solid rgba(0,0,0,0.05)' }}
+                                                style={{ position: 'absolute', top: '120%', right: '10%', background: '#fff', borderRadius: '1.5rem', padding: '1.5rem', width: '280px', boxShadow: '0 20px 40px rgba(0,0,0,0.2)', display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '0.5rem', border: '1px solid rgba(0,0,0,0.05)', zIndex: 10001 }}
                                             >
                                                 {Array.from({ length: 15 }, (_, i) => i + 8).map((h) => (
                                                     <button
@@ -1780,9 +1810,10 @@ export default function ClubBookingInterface({ user, initialPollId }: { user: Us
                                 </div>
                             </section>
 
-                            <footer className="app-footer">
-                                <div>
-                                    <span style={{ color: '#fff', fontWeight: 900 }}>PADELSPOT</span> — Made in Bordeaux
+                            <footer className="app-footer" style={{ display: 'flex', flexDirection: 'column', gap: '1rem', alignItems: 'center' }}>
+                                <div style={{ display: 'flex', gap: '2rem', alignItems: 'center' }}>
+                                    <span style={{ color: '#fff', fontWeight: 900 }}>PADELSPOT</span>
+                                    <Link href="/privacy" style={{ color: 'rgba(255,255,255,0.4)', textDecoration: 'none', fontSize: '11px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Confidentialité</Link>
                                 </div>
                                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                                     <div className="status-dot" />
@@ -1799,7 +1830,7 @@ export default function ClubBookingInterface({ user, initialPollId }: { user: Us
                             <div className="dp-sticky-header">
                                 <div className="results-header-top-row" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.25rem' }}>
                                     <div style={{ display: 'flex', alignItems: 'center', gap: '2rem' }}>
-                                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontWeight: 950, fontSize: '1.35rem', textTransform: 'uppercase', cursor: 'pointer', flexShrink: 0 }} onClick={() => navigateTo('home')}>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontWeight: 950, fontSize: '1.35rem', textTransform: 'uppercase', cursor: 'pointer', flexShrink: 0 }} onClick={() => navigateTo(user ? 'dashboard' : 'home')}>
                                             <Zap fill="var(--sun-blaze)" stroke="none" size={26} /> PadelSpot
                                         </div>
                                     </div>
@@ -2209,7 +2240,7 @@ export default function ClubBookingInterface({ user, initialPollId }: { user: Us
                                         <div style={{ maxWidth: 1200, margin: '0 auto', padding: '0 1.25rem' }}>
                                             {/* LOGO & BACK BAR */}
                                             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.75rem', paddingBottom: '0.75rem', borderBottom: '1px solid rgba(0,0,0,0.04)' }}>
-                                                <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontWeight: 950, fontSize: '1rem', textTransform: 'uppercase', cursor: 'pointer' }} onClick={() => navigateTo('home')}>
+                                                <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontWeight: 950, fontSize: '1rem', textTransform: 'uppercase', cursor: 'pointer' }} onClick={() => navigateTo(user ? 'dashboard' : 'home')}>
                                                     <Zap fill="var(--sun-blaze)" stroke="none" size={20} /> PadelSpot
                                                 </div>
                                                 <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
@@ -2220,7 +2251,7 @@ export default function ClubBookingInterface({ user, initialPollId }: { user: Us
                                                         </div>
                                                     )}
                                                     <button
-                                                        onClick={() => (initialPollId ? router.push('/') : navigateTo('results'))}
+                                                        onClick={() => (initialPollId ? (user ? navigateTo('dashboard') : navigateTo('home')) : navigateTo(previousView || 'results'))}
                                                         style={{ background: 'rgba(0,0,0,0.04)', border: 'none', color: 'var(--pitch-black)', padding: '0.4rem 0.8rem', borderRadius: '99px', fontWeight: 900, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.3rem', fontSize: '0.65rem' }}
                                                     >
                                                         <ChevronLeft size={14} /> RETOUR
@@ -2481,12 +2512,12 @@ export default function ClubBookingInterface({ user, initialPollId }: { user: Us
                         {/* UNIFIED HEADER BAR */}
                         <div style={{ background: '#fff', borderBottom: '1px solid rgba(0,0,0,0.05)', padding: '1rem 2rem', marginBottom: '3rem', position: 'sticky', top: 0, zIndex: 100 }}>
                             <div style={{ maxWidth: 1600, width: '100%', margin: '0 auto', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontWeight: 950, fontSize: '1.35rem', textTransform: 'uppercase', cursor: 'pointer' }} onClick={() => navigateTo('home')}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontWeight: 950, fontSize: '1.35rem', textTransform: 'uppercase', cursor: 'pointer' }} onClick={() => navigateTo('dashboard')}>
                                     <Zap fill="var(--sun-blaze)" stroke="none" size={26} /> PadelSpot
                                 </div>
                                 <div style={{ display: 'flex', gap: '1rem' }}>
-                                    <button onClick={() => setView(previousView)} style={{ background: 'rgba(0,0,0,0.04)', border: 'none', color: 'var(--pitch-black)', padding: '0.5rem 1.25rem', borderRadius: '999px', fontWeight: 900, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.75rem' }}>
-                                        <ChevronLeft size={16} /> RETOUR {previousView === 'results' ? 'AUX CRÉNEAUX' : previousView === 'poll' ? 'AU SONDAGE' : ''}
+                                    <button onClick={() => navigateTo('dashboard')} style={{ background: 'rgba(0,0,0,0.04)', border: 'none', color: 'var(--pitch-black)', padding: '0.5rem 1.25rem', borderRadius: '999px', fontWeight: 900, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.75rem' }}>
+                                        <ChevronLeft size={16} /> RETOUR AU DASHBOARD
                                     </button>
                                 </div>
                             </div>
