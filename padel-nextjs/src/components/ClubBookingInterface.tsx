@@ -856,6 +856,13 @@ export default function ClubBookingInterface({ user, initialPollId }: { user: Us
     const [pollVotes, setPollVotes] = useState<any[]>([]);
     const [isLoadingPoll, setIsLoadingPoll] = useState(false);
 
+    // Post-Booking Flow States
+    const [showBookingConfirmation, setShowBookingConfirmation] = useState<{ id: string, clubName: string, slot?: Slot } | null>(null);
+    const [showAddPlayersModal, setShowAddPlayersModal] = useState(false);
+    const [currentReservationId, setCurrentReservationId] = useState<string | null>(null);
+    const [addedPlayers, setAddedPlayers] = useState<string[]>([]);
+    const [newPlayerName, setNewPlayerName] = useState('');
+
     useEffect(() => {
         if (pollId && view === 'poll') {
             const fetchPollData = async () => {
@@ -1136,7 +1143,102 @@ export default function ClubBookingInterface({ user, initialPollId }: { user: Us
     const selectedBeforeCount = selections.filter(s => s.dayIndex < windowStart).length;
     const selectedAfterCount = selections.filter(s => s.dayIndex >= windowStart + 7).length;
 
+    // --- LOGIC: Post-Booking Flow ---
+    const handleConfirmBooking = async (confirmed: boolean) => {
+        if (!showBookingConfirmation || !user) {
+            setShowBookingConfirmation(null);
+            return;
+        }
+
+        if (confirmed) {
+            const { slot } = showBookingConfirmation;
+            if (slot) {
+                // Save to DB
+                try {
+                    const { data, error } = await supabase.from('reservations').insert({
+                        user_id: user.id,
+                        slot_id: slot.id,
+                        center_name: slot.centerName,
+                        court_name: slot.courtName,
+                        start_time: slot.startTime.toISOString(),
+                        duration_minutes: slot.durationMinutes,
+                        price: slot.price
+                    }).select().single();
+
+                    if (!error && data) {
+                        setCurrentReservationId(data.id);
+                        setAddedPlayers([]);
+                        setShowAddPlayersModal(true);
+                    } else {
+                        console.error("Error saving reservation:", error);
+                    }
+                } catch (err) {
+                    console.error("Critical error saving reservation:", err);
+                }
+            }
+        }
+        setShowBookingConfirmation(null);
+    };
+
+    const handleAddPlayer = async () => {
+        if (!currentReservationId || !newPlayerName.trim()) return;
+
+        const pName = newPlayerName.trim();
+        const { error } = await supabase.from('reservation_players').insert({
+            reservation_id: currentReservationId,
+            player_name: pName
+        });
+
+        if (!error) {
+            setAddedPlayers(prev => [...prev, pName]);
+            setNewPlayerName('');
+        } else {
+            console.error("Error adding player:", error);
+        }
+    };
+
+    const handleInviteFriendToReservation = async (friendName: string) => {
+        if (!currentReservationId) return;
+        const { error } = await supabase.from('reservation_players').insert({
+            reservation_id: currentReservationId,
+            player_name: friendName
+        });
+
+        if (!error) {
+            setAddedPlayers(prev => [...prev, friendName]);
+        }
+    };
+
     // --- EFFECTS ---
+    // Detect return from external booking site
+    useEffect(() => {
+        const handleFocus = () => {
+            const pending = localStorage.getItem('padelspot_pending_reservation');
+            if (pending) {
+                try {
+                    const data = JSON.parse(pending);
+                    // Only show if it matches the current user (if logged in) and is recent (2h)
+                    if (Date.now() - data.timestamp < 2 * 60 * 60 * 1000) {
+                        // We need the slot details. If it was stored, we use it.
+                        setShowBookingConfirmation({
+                            id: data.id,
+                            clubName: data.clubName,
+                            slot: data.slot ? {
+                                ...data.slot,
+                                startTime: new Date(data.slot.startTime),
+                                endTime: new Date(data.slot.endTime)
+                            } : undefined
+                        });
+                    }
+                } catch (e) { console.error("Error parsing pending reservation:", e); }
+                localStorage.removeItem('padelspot_pending_reservation');
+            }
+        };
+
+        window.addEventListener('focus', handleFocus);
+        return () => window.removeEventListener('focus', handleFocus);
+    }, []);
+
     useEffect(() => {
         if (!user) {
             setFavorites([]);
@@ -2531,44 +2633,37 @@ export default function ClubBookingInterface({ user, initialPollId }: { user: Us
                                                                         <div style={{ fontSize: '0.85rem', fontWeight: 700, opacity: 0.6, marginTop: '0.25rem' }}>{slot.centerName} · {slot.durationMinutes} min</div>
                                                                         <div style={{ fontSize: '0.8rem', fontWeight: 900, color: 'var(--sun-blaze)', marginTop: '0.4rem' }}>{slot.price}€ / joueur</div>
                                                                     </div>
-                                                                    <div style={{ display: 'flex', alignItems: 'center' }}>
+                                                                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', flexWrap: 'wrap', justifyContent: 'flex-end', maxWidth: '50%' }}>
                                                                         {votes.map((v, i) => {
                                                                             const isCreatorVote = v.user_id === pollCreatorId || (v.user_name === pollCreatorName && i === 0);
-                                                                            const initials = (v.user_name && v.user_name.trim().toLowerCase() !== 'organisateur') ? v.user_name[0].toUpperCase() : (isCreatorVote ? (pollCreatorName?.[0]?.toUpperCase() || 'O') : 'O');
+                                                                            const name = v.user_name || (isCreatorVote ? pollCreatorName : 'Anonyme');
+                                                                            const color = `hsl(${(i * 137) % 360}, 70%, 50%)`;
+
                                                                             return (
                                                                                 <div
                                                                                     key={i}
-                                                                                    title={v.user_name || (isCreatorVote ? pollCreatorName : 'Anonyme')}
                                                                                     style={{
-                                                                                        width: 34, height: 34, borderRadius: '50%',
-                                                                                        background: v.vote_value === false ? '#eee' : `hsl(${(i * 137) % 360}, 70%, 50%)`,
-                                                                                        border: '3px solid #fff',
-                                                                                        marginLeft: i === 0 ? 0 : -12,
-                                                                                        display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                                                                        color: v.vote_value === false ? '#aaa' : '#fff',
-                                                                                        fontSize: '0.7rem', fontWeight: 950,
-                                                                                        boxShadow: '0 4px 8px rgba(0,0,0,0.05)',
-                                                                                        zIndex: 20 - i,
-                                                                                        position: 'relative',
+                                                                                        padding: '0.4rem 0.8rem',
+                                                                                        borderRadius: '2rem',
+                                                                                        background: v.vote_value === false ? 'rgba(0,0,0,0.03)' : `hsla(${(i * 137) % 360}, 70%, 50%, 0.08)`,
+                                                                                        border: `1px solid ${v.vote_value === false ? 'rgba(0,0,0,0.05)' : `hsla(${(i * 137) % 360}, 70%, 50%, 0.1)`}`,
+                                                                                        display: 'flex', alignItems: 'center', gap: '0.5rem',
+                                                                                        color: v.vote_value === false ? '#aaa' : `hsl(${(i * 137) % 360}, 70%, 40%)`,
+                                                                                        fontSize: '0.75rem', fontWeight: 900,
                                                                                         textDecoration: v.vote_value === false ? 'line-through' : 'none',
-                                                                                        opacity: v.vote_value === false ? 0.7 : 1,
-                                                                                        cursor: 'help'
+                                                                                        opacity: v.vote_value === false ? 0.6 : 1,
+                                                                                        position: 'relative'
                                                                                     }}>
-                                                                                    {initials}
+                                                                                    <div style={{ width: 8, height: 8, borderRadius: '50%', background: v.vote_value === false ? '#ccc' : color }} />
+                                                                                    {name}
                                                                                     {v.vote_value === false && (
-                                                                                        <div style={{ position: 'absolute', top: -2, right: -2, background: '#ff4444', borderRadius: '50%', width: 12, height: 12, display: 'flex', alignItems: 'center', justifyContent: 'center', border: '2px solid #fff' }}>
+                                                                                        <div style={{ position: 'absolute', top: -4, right: -4, background: '#ff4444', borderRadius: '50%', width: 14, height: 14, display: 'flex', alignItems: 'center', justifyContent: 'center', border: '2px solid #fff', boxShadow: '0 2px 4px rgba(255,0,0,0.2)' }}>
                                                                                             <X size={8} color="#fff" strokeWidth={4} />
                                                                                         </div>
                                                                                     )}
                                                                                 </div>
                                                                             );
                                                                         })}
-                                                                        {votes.length > 6 && (
-                                                                            <div style={{ width: 34, height: 34, borderRadius: '50%', background: 'rgba(0,0,0,0.05)', border: '3px solid #fff', marginLeft: -12, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.7rem', fontWeight: 800, color: 'rgba(0,0,0,0.4)', zIndex: 0 }}>
-                                                                                +{votes.length - 6}
-                                                                            </div>
-                                                                        )}
-                                                                        {votes.length === 0 && <div style={{ fontSize: '0.7rem', fontWeight: 800, opacity: 0.2, textTransform: 'uppercase' }}>Aucun vote</div>}
                                                                     </div>
                                                                 </div>
 
@@ -2986,13 +3081,118 @@ export default function ClubBookingInterface({ user, initialPollId }: { user: Us
                             <h2 style={{ fontSize: '3rem', fontWeight: 950, marginBottom: '2rem', textTransform: 'uppercase', lineHeight: 1 }}>RÉSERVATION LIVE<br /><span style={{ color: 'var(--sun-blaze)' }}>{externalBookingSlot.centerName}</span></h2>
                             <p style={{ opacity: 0.5, marginBottom: '3.5rem', fontSize: '1rem', fontWeight: 500 }}>Finalisez votre paiement sur l'interface sécurisée de notre partenaire de confiance.</p>
                             <div style={{ display: 'flex', gap: '1rem' }}>
-                                <a href={externalBookingSlot.bookingUrl} target="_blank" rel="noreferrer" onClick={() => setExternalBookingSlot(null)} style={{ flex: 1, background: 'var(--sun-blaze)', color: '#fff', textDecoration: 'none', padding: '1.25rem', borderRadius: '1.5rem', fontWeight: 950, fontSize: '1rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem' }}>CONTINUER <ArrowRight size={20} /></a>
+                                <a
+                                    href={externalBookingSlot.bookingUrl}
+                                    target="_blank"
+                                    rel="noreferrer"
+                                    onClick={() => {
+                                        localStorage.setItem('padelspot_pending_reservation', JSON.stringify({
+                                            id: externalBookingSlot.id,
+                                            clubName: externalBookingSlot.centerName,
+                                            slot: externalBookingSlot, // Store details for the confirmation modal
+                                            timestamp: Date.now()
+                                        }));
+                                        setExternalBookingSlot(null);
+                                    }}
+                                    style={{ flex: 1, background: 'var(--sun-blaze)', color: '#fff', textDecoration: 'none', padding: '1.25rem', borderRadius: '1.5rem', fontWeight: 950, fontSize: '1rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem' }}
+                                >
+                                    CONTINUER <ArrowRight size={20} />
+                                </a>
                                 <button onClick={() => setExternalBookingSlot(null)} style={{ background: '#f5f5f5', color: '#101010', border: 'none', padding: '1.25rem 2rem', borderRadius: '1.5rem', fontWeight: 900, cursor: 'pointer', fontSize: '1rem' }}>RETOUR</button>
                             </div>
                         </div>
                     </div>
                 )
             }
+
+            {/* Post-Booking Validation Popup */}
+            <AnimatePresence>
+                {showBookingConfirmation && (
+                    <div style={{ position: 'fixed', inset: 0, zIndex: 25000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}>
+                        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setShowBookingConfirmation(null)} style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.85)', backdropFilter: 'blur(8px)' }} />
+                        <motion.div initial={{ scale: 0.95, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.95, opacity: 0 }} style={{ position: 'relative', background: '#FFF', borderRadius: '32px', padding: '48px', maxWidth: '440px', width: '100%', textAlign: 'center', boxShadow: '0 30px 60px rgba(0,0,0,0.4)' }}>
+                            <div style={{ width: 80, height: 80, borderRadius: '50%', background: 'rgba(255,107,0,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 2rem' }}>
+                                <CheckCircle2 size={40} color="var(--sun-blaze)" />
+                            </div>
+                            <h3 style={{ fontSize: '28px', fontWeight: 950, marginBottom: '12px', letterSpacing: '-0.02em' }}>Réservation réussie ?</h3>
+                            <p style={{ color: '#666', marginBottom: '32px', fontWeight: 600, fontSize: '1.1rem' }}>Tu as bien bloqué le créneau à {showBookingConfirmation.clubName} ?</p>
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                                <button onClick={() => handleConfirmBooking(true)} style={{ padding: '1.25rem', borderRadius: '1.25rem', background: 'var(--sun-blaze)', color: '#FFF', fontWeight: 950, fontSize: '1.1rem', border: 'none', cursor: 'pointer' }}>Oui, c'est booké !</button>
+                                <button onClick={() => handleConfirmBooking(false)} style={{ padding: '1.25rem', borderRadius: '1.25rem', background: '#F5F5F5', color: '#666', fontWeight: 800, fontSize: '1rem', border: 'none', cursor: 'pointer' }}>Non, c'était complet</button>
+                            </div>
+                        </motion.div>
+                    </div>
+                )}
+            </AnimatePresence>
+
+            {/* Add Players Modal */}
+            <AnimatePresence>
+                {showAddPlayersModal && (
+                    <div style={{ position: 'fixed', inset: 0, zIndex: 26000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem' }}>
+                        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setShowAddPlayersModal(false)} style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.9)', backdropFilter: 'blur(10px)' }} />
+                        <motion.div initial={{ scale: 0.9, opacity: 0, y: 20 }} animate={{ scale: 1, opacity: 1, y: 0 }} exit={{ scale: 0.9, opacity: 0, y: 20 }} style={{ position: 'relative', background: '#fff', borderRadius: '2.5rem', width: '100%', maxWidth: '500px', padding: '2.5rem', boxShadow: '0 40px 80px rgba(0,0,0,0.5)' }}>
+                            <button onClick={() => setShowAddPlayersModal(false)} style={{ position: 'absolute', top: '1.5rem', right: '1.5rem', background: 'rgba(0,0,0,0.05)', border: 'none', width: '2.5rem', height: '2.5rem', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}><X size={18} /></button>
+
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '2rem' }}>
+                                <div style={{ width: 50, height: 50, borderRadius: '1rem', background: 'rgba(255,107,0,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--sun-blaze)' }}>
+                                    <UserPlus size={24} />
+                                </div>
+                                <h2 style={{ fontSize: '1.8rem', fontWeight: 950, letterSpacing: '-0.02em' }}>Ajouter des joueurs</h2>
+                            </div>
+
+                            <p style={{ color: '#666', fontWeight: 600, fontSize: '1rem', marginBottom: '2rem' }}>Qui t'accompagne sur le terrain ?</p>
+
+                            {/* Manual Entry */}
+                            <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '2rem' }}>
+                                <input
+                                    type="text"
+                                    placeholder="Nom du joueur..."
+                                    value={newPlayerName}
+                                    onChange={(e) => setNewPlayerName(e.target.value)}
+                                    onKeyDown={(e) => e.key === 'Enter' && handleAddPlayer()}
+                                    style={{ flex: 1, padding: '1rem 1.5rem', borderRadius: '1.25rem', border: '1px solid #eee', background: '#f9f9f9', fontWeight: 700, fontSize: '1rem', outline: 'none' }}
+                                />
+                                <button onClick={handleAddPlayer} style={{ padding: '1rem', borderRadius: '1.25rem', background: 'var(--pitch-black)', color: '#fff', border: 'none', cursor: 'pointer' }}><Plus size={20} /></button>
+                            </div>
+
+                            {/* Added Players List */}
+                            {addedPlayers.length > 0 && (
+                                <div style={{ marginBottom: '2rem' }}>
+                                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
+                                        {addedPlayers.map((p, i) => (
+                                            <div key={i} style={{ background: 'rgba(255,107,0,0.1)', color: 'var(--sun-blaze)', padding: '0.5rem 1rem', borderRadius: '99px', fontSize: '0.85rem', fontWeight: 900, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                                {p}
+                                                {/* <Trash2 size={12} strokeWidth={3} style={{ cursor: 'pointer' }} /> */}
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* Suggestions from Friends */}
+                            {friends.length > 0 && (
+                                <div style={{ borderTop: '1px solid #f0f0f0', paddingTop: '2rem' }}>
+                                    <label style={{ fontSize: '0.75rem', fontWeight: 950, textTransform: 'uppercase', color: '#999', marginBottom: '1.25rem', display: 'block' }}>Tes potes récents</label>
+                                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
+                                        {friends.filter(f => !addedPlayers.includes(f.friend_name)).slice(0, 4).map(f => (
+                                            <button
+                                                key={f.id}
+                                                onClick={() => handleInviteFriendToReservation(f.friend_name)}
+                                                style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '0.75rem 1rem', borderRadius: '1rem', border: '1px solid #f0f0f0', background: '#fff', cursor: 'pointer', textAlign: 'left' }}
+                                            >
+                                                <div style={{ width: 30, height: 30, borderRadius: '50%', background: '#f5f5f5', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.7rem', fontWeight: 900 }}>{f.friend_name[0]}</div>
+                                                <span style={{ fontSize: '0.85rem', fontWeight: 800 }}>{f.friend_name}</span>
+                                            </button>
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
+
+                            <button onClick={() => setShowAddPlayersModal(false)} style={{ width: '100%', marginTop: '3rem', padding: '1.25rem', borderRadius: '1.25rem', background: 'var(--sun-blaze)', color: '#fff', border: 'none', fontWeight: 950, fontSize: '1rem', cursor: 'pointer', boxShadow: '0 10px 30px rgba(255,107,0,0.3)' }}>TOUT EST BON !</button>
+                        </motion.div>
+                    </div>
+                )}
+            </AnimatePresence>
 
             <AnimatePresence>
                 {showSelectedModal && (

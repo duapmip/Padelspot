@@ -84,7 +84,7 @@ export default function DashboardView({ user, onNavigateToSearch, onViewPoll, on
     const [friends, setFriends] = useState<Friend[]>([]);
     const [suggestedSlots, setSuggestedSlots] = useState<SuggestedSlot[]>([]);
     const [loading, setLoading] = useState(true);
-    const [showValidationPopup, setShowValidationPopup] = useState<{ id: string, club: string } | null>(null);
+    // showValidationPopup is now handled by the parent ClubBookingInterface
 
     // Pickers State
     const [isDatePickerOpen, setIsDatePickerOpen] = useState(false);
@@ -113,7 +113,7 @@ export default function DashboardView({ user, onNavigateToSearch, onViewPoll, on
                 // 1. Fetch polls created by me
                 const { data: myPolls } = await supabase
                     .from('polls')
-                    .select('*, poll_votes(*)')
+                    .select('*, poll_votes(*), poll_slots(slot_id)')
                     .eq('user_id', user.id)
                     .order('created_at', { ascending: false });
 
@@ -130,10 +130,26 @@ export default function DashboardView({ user, onNavigateToSearch, onViewPoll, on
                 if (otherPollIds.length > 0) {
                     const { data: invitations } = await supabase
                         .from('polls')
-                        .select('*, poll_votes(*)')
+                        .select('*, poll_votes(*), poll_slots(slot_id)')
                         .in('id', otherPollIds);
                     myInvites = invitations || [];
                 }
+
+                // 2.5 Fetch slot details for all polls to get dates
+                const allSlotIds = new Set<string>();
+                [...(myPolls || []), ...myInvites].forEach(p => {
+                    (p.poll_slots || []).forEach((ps: any) => allSlotIds.add(ps.slot_id));
+                });
+
+                const { data: slotDetails } = await supabase
+                    .from('slots')
+                    .select('id, start_time')
+                    .in('id', Array.from(allSlotIds));
+
+                const slotDateMap: Record<string, string> = {};
+                slotDetails?.forEach(s => {
+                    slotDateMap[s.id] = s.start_time;
+                });
 
                 const processPolls = (rawPolls: any[], isCreator: boolean) => {
                     return rawPolls.map(p => {
@@ -155,11 +171,18 @@ export default function DashboardView({ user, onNavigateToSearch, onViewPoll, on
                         const values = Object.values(chaudVotesBySlot);
                         const maxVotesOnASlot = values.length > 0 ? Math.max(...values) : 1;
 
+                        const pollSlotDates = (p.poll_slots || [])
+                            .map((ps: any) => slotDateMap[ps.slot_id])
+                            .filter(Boolean)
+                            .map((dateStr: string) => new Date(dateStr));
+
                         return {
                             id: p.id,
                             created_at: p.created_at,
+                            slot_dates: pollSlotDates,
                             target_voters_count: p.target_voters_count || 4,
                             votes_count: uniqueVoters.size,
+                            voters: Array.from(uniqueVoters),
                             creator_name: isCreator ? 'Moi' : (p.creator_name || 'Organisateur'),
                             is_ready_to_book: maxVotesOnASlot >= (p.target_voters_count || 4),
                             is_validated: p.is_validated || false
@@ -167,10 +190,32 @@ export default function DashboardView({ user, onNavigateToSearch, onViewPoll, on
                     });
                 };
 
+                // 3. Fetch Real Reservations
+                const { data: resData, error: resError } = await supabase
+                    .from('reservations')
+                    .select(`
+                        *,
+                        reservation_players (
+                            player_name
+                        )
+                    `)
+                    .eq('user_id', user.id)
+                    .order('start_time', { ascending: true });
+
+                if (!resError && resData) {
+                    const formatted = resData.map((r: any) => ({
+                        id: r.id,
+                        date: new Date(r.start_time),
+                        club_name: r.center_name,
+                        court_name: r.court_name,
+                        players: r.reservation_players.map((rp: any) => ({ first_name: rp.player_name }))
+                    }));
+                    setConfirmedMatches(formatted);
+                }
+
                 setPolls(processPolls(myPolls || [], true));
                 setInvites(processPolls(myInvites, false));
 
-                setConfirmedMatches([]);
                 setFriends([]);
                 setSuggestedSlots([]);
 
@@ -184,9 +229,7 @@ export default function DashboardView({ user, onNavigateToSearch, onViewPoll, on
     }, [user.id]);
 
     const confirmBooking = async (success: boolean) => {
-        if (!showValidationPopup) return;
-        if (success) setPolls(prev => prev.map(p => p.id === showValidationPopup.id ? { ...p, is_validated: true } : p));
-        setShowValidationPopup(null);
+        // Redundant here, handled in parent
     };
 
     return (
@@ -385,20 +428,22 @@ export default function DashboardView({ user, onNavigateToSearch, onViewPoll, on
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
                             {confirmedMatches.map(match => (
                                 <div key={match.id} style={{ background: '#FFF', border: '1px solid #EDEDED', borderRadius: '24px', padding: '24px', display: 'flex', alignItems: 'center', gap: '32px', transition: 'transform 0.2s', cursor: 'pointer' }}>
-                                    <div style={{ textAlign: 'center', paddingRight: '32px', borderRight: '1px solid #F0F0F0', minWidth: '80px' }}>
-                                        <div style={{ fontSize: '10px', fontWeight: 900, color: '#999', textTransform: 'uppercase', marginBottom: '2px' }}>{format(match.date, 'MMM', { locale: fr })}</div>
-                                        <div style={{ fontSize: '28px', fontWeight: 900, lineHeight: 1 }}>{format(match.date, 'dd')}</div>
-                                        <div style={{ fontSize: '12px', fontWeight: 800, color: '#FF6B00', marginTop: '4px' }}>{format(match.date, 'HH:mm')}</div>
+                                    <div style={{ textAlign: 'center', paddingRight: '32px', borderRight: '1px solid #F0F0F0', minWidth: '95px' }}>
+                                        <div style={{ fontSize: '10px', fontWeight: 950, color: '#FF6B00', textTransform: 'uppercase', marginBottom: '4px', letterSpacing: '0.05em' }}>{format(match.date, 'EEEE', { locale: fr })}</div>
+                                        <div style={{ fontSize: '22px', fontWeight: 950, lineHeight: 1, letterSpacing: '-0.02em', color: '#000' }}>{format(match.date, 'd MMM', { locale: fr })}</div>
+                                        <div style={{ fontSize: '12px', fontWeight: 800, color: '#999', marginTop: '6px' }}>{format(match.date, 'HH:mm')}</div>
                                     </div>
                                     <div style={{ flex: 1 }}>
                                         <h4 style={{ fontSize: '17px', fontWeight: 800, marginBottom: '2px' }}>{match.club_name}</h4>
                                         <p style={{ fontSize: '13px', color: '#999', fontWeight: 600 }}>{match.club_address}</p>
-                                        <div style={{ display: 'flex', gap: '6px', marginTop: '12px' }}>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '14px', flexWrap: 'wrap' }}>
                                             {match.players.map((p, i) => (
-                                                <div key={i} style={{ width: '28px', height: '28px', borderRadius: '8px', background: '#F5F5F5', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '11px', fontWeight: 800, color: '#666' }}>
-                                                    {p.first_name[0]}
+                                                <div key={i} style={{ padding: '4px 10px', borderRadius: '8px', background: '#F5F5F5', border: '1px solid rgba(0,0,0,0.03)', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                                    <div style={{ width: 14, height: 14, borderRadius: '50%', background: `hsl(${(i * 137) % 360}, 60%, 50%)`, fontSize: '8px', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 900 }}>{p.first_name?.[0]}</div>
+                                                    <span style={{ fontSize: '11px', fontWeight: 700, color: '#333' }}>{p.first_name}</span>
                                                 </div>
                                             ))}
+                                            {match.players.length === 0 && <span style={{ fontSize: '11px', color: '#BDBDBD', fontWeight: 600 }}>Solo</span>}
                                         </div>
                                     </div>
                                     <button style={{ padding: '12px 20px', borderRadius: '14px', background: '#F9FAFB', border: '1px solid #EDEDED', fontSize: '12px', fontWeight: 800, cursor: 'pointer' }}>Itinéraire</button>
@@ -441,27 +486,72 @@ export default function DashboardView({ user, onNavigateToSearch, onViewPoll, on
                                 <div
                                     key={poll.id}
                                     onClick={() => onViewPoll(poll.id)}
-                                    style={{ background: '#FFF', border: '1px solid #EDEDED', borderRadius: '24px', padding: '24px', cursor: 'pointer', transition: 'all 0.2s' }}
+                                    style={{
+                                        background: '#FFF',
+                                        border: '1px solid #EDEDED',
+                                        borderRadius: '24px',
+                                        padding: '20px',
+                                        cursor: 'pointer',
+                                        transition: 'all 0.2s',
+                                        position: 'relative',
+                                        overflow: 'hidden'
+                                    }}
                                     onMouseOver={e => (e.currentTarget as HTMLElement).style.borderColor = '#FF6B00'}
                                     onMouseOut={e => (e.currentTarget as HTMLElement).style.borderColor = '#EDEDED'}
                                 >
                                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '16px' }}>
                                         <div>
-                                            <h5 style={{ fontSize: '15px', fontWeight: 800 }}>Match {format(new Date(poll.created_at), 'EEEE', { locale: fr })}</h5>
-                                            <p style={{ fontSize: '12px', color: '#999', fontWeight: 600 }}>{format(new Date(poll.created_at), 'd MMMM', { locale: fr })}</p>
+                                            <h5 style={{ fontSize: '10px', fontWeight: 950, textTransform: 'uppercase', color: '#999', letterSpacing: '0.1em', marginBottom: '14px' }}>Organisation Match</h5>
+                                            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                                                {poll.slot_dates && poll.slot_dates.length > 0 ? (
+                                                    Array.from(new Set(poll.slot_dates
+                                                        .sort((a: Date, b: Date) => a.getTime() - b.getTime())
+                                                        .map((d: Date) => d.toISOString())))
+                                                        .slice(0, 3) // Show max 3 to keep it compact
+                                                        .map((dateIso, i) => {
+                                                            const d = new Date(dateIso);
+                                                            return (
+                                                                <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                                                                    <div style={{ width: '34px', height: '34px', borderRadius: '10px', background: '#F9FAFB', border: '1px solid #F0F0F0', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
+                                                                        <span style={{ fontSize: '11px', fontWeight: 950, color: '#FF6B00', lineHeight: 1 }}>{format(d, 'dd')}</span>
+                                                                        <span style={{ fontSize: '7px', fontWeight: 900, textTransform: 'uppercase', color: '#999' }}>{format(d, 'MMM', { locale: fr })}</span>
+                                                                    </div>
+                                                                    <div>
+                                                                        <p style={{ fontSize: '14px', fontWeight: 800, color: '#000', textTransform: 'capitalize' }}>{format(d, 'EEEE', { locale: fr })}</p>
+                                                                    </div>
+                                                                </div>
+                                                            );
+                                                        })
+                                                ) : (
+                                                    <p style={{ fontSize: '12px', color: '#999', fontWeight: 700 }}>Créé le {format(new Date(poll.created_at), 'd MMMM', { locale: fr })}</p>
+                                                )}
+                                                {(poll.slot_dates || []).length > 3 && (
+                                                    <p style={{ fontSize: '11px', color: '#FF6B00', fontWeight: 800, marginLeft: '44px' }}>+ {(poll.slot_dates || []).length - 3} autres créneaux</p>
+                                                )}
+                                            </div>
                                         </div>
-                                        <span style={{ fontSize: '10px', fontWeight: 900, color: poll.is_ready_to_book ? '#2E7D32' : '#999', background: poll.is_ready_to_book ? '#E8F5E9' : '#F5F5F5', padding: '4px 8px', borderRadius: '6px' }}>{poll.votes_count}/{poll.target_voters_count}</span>
+                                        <div style={{ textAlign: 'right' }}>
+                                            <div style={{ fontSize: '18px', fontWeight: 950, color: poll.is_ready_to_book ? '#2E7D32' : '#000', lineHeight: 1 }}>
+                                                {poll.votes_count}<span style={{ color: '#E0E0E0', margin: '0 2px' }}>/</span>{poll.target_voters_count}
+                                            </div>
+                                            <p style={{ fontSize: '9px', fontWeight: 900, color: '#999', textTransform: 'uppercase', marginTop: '6px', letterSpacing: '0.02em' }}>Joueurs</p>
+                                            <div style={{ display: 'flex', gap: '4px', marginTop: '12px', justifyContent: 'flex-end' }}>
+                                                {(poll.voters as any[]).slice(0, 3).map((vName, i) => (
+                                                    <div key={i} title={vName} style={{ width: 16, height: 16, borderRadius: '50%', background: `hsl(${(i * 137) % 360}, 60%, 50%)`, fontSize: '8px', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 900, border: '1.5px solid #FFF' }}>{vName[0]}</div>
+                                                ))}
+                                            </div>
+                                        </div>
                                     </div>
-                                    {poll.is_ready_to_book ? (
-                                        <button onClick={(e) => { e.stopPropagation(); setShowValidationPopup({ id: poll.id, club: "Big Padel" }); }} style={{ width: '100%', padding: '14px', background: '#1A1A1A', color: '#FFF', borderRadius: '16px', fontWeight: 800, fontSize: '13px', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
+
+                                    <div style={{ height: '4px', background: '#F5F5F5', borderRadius: '2px', marginTop: '20px', overflow: 'hidden' }}>
+                                        <div style={{ height: '100%', background: poll.is_ready_to_book ? '#2E7D32' : '#FF6B00', width: `${(poll.votes_count / poll.target_voters_count) * 100}%`, transition: 'width 0.6s cubic-bezier(0.4, 0, 0.2, 1)' }} />
+                                    </div>
+
+                                    {poll.is_ready_to_book && (
+                                        <button onClick={(e) => { e.stopPropagation(); setShowValidationPopup({ id: poll.id, club: "Big Padel" }); }} style={{ width: '100%', padding: '12px', background: '#1A1A1A', color: '#FFF', borderRadius: '14px', fontWeight: 800, fontSize: '13px', border: 'none', cursor: 'pointer', marginTop: '16px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
                                             <Check size={16} /> Réserver
                                         </button>
-                                    ) : (
-                                        <button style={{ width: '100%', padding: '14px', background: '#F5F5F5', color: '#666', borderRadius: '16px', fontWeight: 800, fontSize: '13px', border: 'none', cursor: 'pointer' }}>Relancer le groupe</button>
                                     )}
-                                    <div style={{ height: '4px', background: '#F5F5F5', borderRadius: '2px', marginTop: '20px', overflow: 'hidden' }}>
-                                        <div style={{ height: '100%', background: poll.is_ready_to_book ? '#2E7D32' : '#FF6B00', width: `${(poll.votes_count / poll.target_voters_count) * 100}%`, transition: 'width 0.5s cubic-bezier(0.4, 0, 0.2, 1)' }} />
-                                    </div>
                                 </div>
                             ))}
                             {polls.length === 0 && (
@@ -510,25 +600,10 @@ export default function DashboardView({ user, onNavigateToSearch, onViewPoll, on
                     </section>
 
                 </div>
-            </main>
+            </main >
 
-            {/* VALIDATION POPUP - CLEAN OVERLAY */}
-            <AnimatePresence>
-                {showValidationPopup && (
-                    <div style={{ position: 'fixed', inset: 0, zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}>
-                        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setShowValidationPopup(null)} style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.8)', backdropFilter: 'blur(4px)' }} />
-                        <motion.div initial={{ scale: 0.95, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.95, opacity: 0 }} style={{ position: 'relative', background: '#FFF', borderRadius: '32px', padding: '48px', maxWidth: '440px', width: '100%', textAlign: 'center' }}>
-                            <h3 style={{ fontSize: '24px', fontWeight: 800, marginBottom: '12px' }}>Réservation réussie ?</h3>
-                            <p style={{ color: '#666', marginBottom: '32px', fontWeight: 500 }}>Tu as bloqué le créneau à {showValidationPopup.club} ?</p>
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                                <button onClick={() => confirmBooking(true)} style={{ padding: '16px', borderRadius: '16px', background: '#FF6B00', color: '#FFF', fontWeight: 800, fontSize: '15px' }}>Oui, c'est booké !</button>
-                                <button onClick={() => confirmBooking(false)} style={{ padding: '16px', borderRadius: '16px', background: '#F5F5F5', color: '#666', fontWeight: 700, fontSize: '15px' }}>Non, c'était complet</button>
-                            </div>
-                        </motion.div>
-                    </div>
-                )}
-            </AnimatePresence>
-        </div>
+            {/* VALIDATION POPUP - Handled by parent ClubBookingInterface */}
+        </div >
     );
 }
 
