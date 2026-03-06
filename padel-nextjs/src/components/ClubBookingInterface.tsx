@@ -865,13 +865,13 @@ export default function ClubBookingInterface({ user, initialPollId }: { user: Us
                     // Step 1: Attempt to get poll metadata
                     const { data: pollData, error: pError } = await supabase
                         .from('polls')
-                        .select('target_voters_count, user_id, created_by, creator_name')
+                        .select('target_voters_count, user_id, creator_name')
                         .eq('id', pollId)
                         .single();
 
                     if (pollData) {
                         setTargetVoters(pollData.target_voters_count || 4);
-                        const cId = pollData.created_by || pollData.user_id;
+                        const cId = pollData.user_id;
                         setPollCreatorId(cId);
                         setPollCreatorName(pollData.creator_name || 'Organisateur');
                     } else {
@@ -938,9 +938,10 @@ export default function ClubBookingInterface({ user, initialPollId }: { user: Us
                     }
 
                     // Step 4: Fetch Votes
+                    // Explicit select to avoid 400 errors if some columns are missing
                     const { data: vData, error: vError } = await supabase
                         .from('poll_votes')
-                        .select('*')
+                        .select('slot_id, user_name, vote_value')
                         .eq('poll_id', pollId);
 
                     if (vError) console.error("Votes fetch error:", vError);

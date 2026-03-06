@@ -146,7 +146,9 @@ export default function DashboardView({ user, onNavigateToSearch, onViewPoll, on
                             if (v.vote_value === true) {
                                 chaudVotesBySlot[v.slot_id] = (chaudVotesBySlot[v.slot_id] || 0) + 1;
                             }
-                            uniqueVoters.add(v.user_name);
+                            // Clean user_name to avoid duplicates like "Adrien " vs "Adrien"
+                            const name = (v.user_name || '').trim();
+                            if (name) uniqueVoters.add(name);
                         });
 
                         const values = Object.values(chaudVotesBySlot);
@@ -157,7 +159,7 @@ export default function DashboardView({ user, onNavigateToSearch, onViewPoll, on
                             created_at: p.created_at,
                             target_voters_count: p.target_voters_count || 4,
                             votes_count: uniqueVoters.size,
-                            creator_name: isCreator ? 'Moi' : (p.creator_name || 'Un pote'),
+                            creator_name: isCreator ? 'Moi' : (p.creator_name || 'Organisateur'),
                             is_ready_to_book: maxVotesOnASlot >= (p.target_voters_count || 4),
                             is_validated: p.is_validated || false
                         };
