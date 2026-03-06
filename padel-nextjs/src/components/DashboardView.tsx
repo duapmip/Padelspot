@@ -103,54 +103,70 @@ export default function DashboardView({ user, onNavigateToSearch, onViewPoll, on
 
     useEffect(() => {
         const fetchData = async () => {
+            if (!user) return;
             setLoading(true);
             try {
                 // Profile
                 const { data: prof } = await supabase.from('profiles').select('*').eq('id', user.id).single();
                 setProfile(prof);
 
-                // Polls
-                const { data: myPolls, error: pollErr } = await supabase
+                // 1. Fetch polls created by me
+                const { data: myPolls } = await supabase
                     .from('polls')
                     .select('*, poll_votes(*)')
                     .eq('user_id', user.id)
                     .order('created_at', { ascending: false });
 
-                if (pollErr) console.error("Polls fetch error:", pollErr);
+                // 2. Fetch polls where I voted (but didn't create)
+                const { data: votedPollsIds } = await supabase
+                    .from('poll_votes')
+                    .select('poll_id')
+                    .eq('user_id', user.id);
 
-                if (myPolls) {
-                    setPolls(myPolls.map(p => {
-                        const votesBySlot: Record<string, number> = {};
+                const otherPollIds = Array.from(new Set(votedPollsIds?.map(v => v.poll_id))).filter(id => !myPolls?.some(mp => mp.id === id));
+
+                let myInvites: any[] = [];
+                if (otherPollIds.length > 0) {
+                    const { data: invitations } = await supabase
+                        .from('polls')
+                        .select('*, poll_votes(*)')
+                        .in('id', otherPollIds);
+                    myInvites = invitations || [];
+                }
+
+                const processPolls = (rawPolls: any[], isCreator: boolean) => {
+                    return rawPolls.map(p => {
+                        const chaudVotesBySlot: Record<string, number> = {};
                         const uniqueVoters = new Set();
-                        // Always include creator
-                        uniqueVoters.add(p.user_id);
+
+                        // Use poll.creator_name as the first voter
+                        uniqueVoters.add(p.creator_name || 'Organisateur');
 
                         (p.poll_votes || []).forEach((v: any) => {
-                            if (v.vote_value !== false) {
-                                votesBySlot[v.slot_id] = (votesBySlot[v.slot_id] || 0) + 1;
+                            if (v.vote_value === true) {
+                                chaudVotesBySlot[v.slot_id] = (chaudVotesBySlot[v.slot_id] || 0) + 1;
                             }
-                            uniqueVoters.add(v.user_id || v.user_name);
+                            uniqueVoters.add(v.user_name);
                         });
 
-                        // Add creator's implied vote to each slot's count for readiness
-                        // (Assuming they are 'Chaud' for all slots they selected initially)
-                        const values = Object.values(votesBySlot).map(count => count + 1);
-                        if (values.length === 0) values.push(1); // At least the creator
-                        const maxVotesOnASlot = values.length > 0 ? Math.max(...values) : 0;
+                        const values = Object.values(chaudVotesBySlot);
+                        const maxVotesOnASlot = values.length > 0 ? Math.max(...values) : 1;
 
                         return {
                             id: p.id,
                             created_at: p.created_at,
                             target_voters_count: p.target_voters_count || 4,
                             votes_count: uniqueVoters.size,
-                            creator_name: 'Moi',
+                            creator_name: isCreator ? 'Moi' : (p.creator_name || 'Un pote'),
                             is_ready_to_book: maxVotesOnASlot >= (p.target_voters_count || 4),
                             is_validated: p.is_validated || false
                         };
-                    }));
-                }
+                    });
+                };
 
-                setInvites([]);
+                setPolls(processPolls(myPolls || [], true));
+                setInvites(processPolls(myInvites, false));
+
                 setConfirmedMatches([]);
                 setFriends([]);
                 setSuggestedSlots([]);

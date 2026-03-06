@@ -854,122 +854,100 @@ export default function ClubBookingInterface({ user, initialPollId }: { user: Us
     }, [slots]);
 
     const [pollVotes, setPollVotes] = useState<any[]>([]);
+    const [isLoadingPoll, setIsLoadingPoll] = useState(false);
 
     useEffect(() => {
         if (pollId && view === 'poll') {
             const fetchPollData = async () => {
-                // 0. Fetch poll details
-                const { data: pollData, error: pError } = await supabase
-                    .from('polls')
-                    .select('target_voters_count, user_id, created_by, creator_name')
-                    .eq('id', pollId)
-                    .single();
+                setIsLoadingPoll(true);
+                try {
+                    const { data: pollData, error: pError } = await supabase
+                        .from('polls')
+                        .select('target_voters_count, user_id, created_by, creator_name')
+                        .eq('id', pollId)
+                        .single();
 
-                if (pError || !pollData) {
-                    console.error("Error fetching poll:", pError);
-                    return;
-                }
+                    if (pError || !pollData) {
+                        setIsLoadingPoll(false);
+                        return;
+                    }
 
-                setTargetVoters(pollData.target_voters_count);
-                const creatorId = pollData.created_by || pollData.user_id;
-                setPollCreatorId(creatorId);
+                    setTargetVoters(pollData.target_voters_count);
+                    const creatorId = pollData.created_by || pollData.user_id;
+                    setPollCreatorId(creatorId);
+                    setPollCreatorName(pollData.creator_name || 'Organisateur');
 
-                // Fetch Creator Name with better fallback
-                const { data: creatorProf } = await supabase
-                    .from('profiles')
-                    .select('first_name, email')
-                    .eq('id', creatorId)
-                    .single();
+                    const { data: psData } = await supabase
+                        .from('poll_slots')
+                        .select('slot_id')
+                        .eq('poll_id', pollId);
 
-                const bestName = pollData?.creator_name ||
-                    creatorProf?.first_name ||
-                    creatorProf?.email?.split('@')[0] ||
-                    (user && creatorId === user.id ? (profileFields.firstName || user.email?.split('@')[0]) : null);
+                    const ids = psData?.map((ps: any) => ps.slot_id) || [];
+                    setSelectedSlots(ids);
 
-                if (bestName) setPollCreatorName(bestName);
+                    if (ids.length > 0) {
+                        const { data: sData } = await supabase
+                            .from('slots')
+                            .select('*')
+                            .in('id', ids);
 
-                // Show name prompt for guests if not already set
-                if (!user && !voterName) {
-                    setShowGuestNameModal(true);
-                }
+                        if (sData) {
+                            const enriched = sData.map((slot: any) => {
+                                let normalizedName = slot.center_name;
+                                let coords = bordeauxCoordinates[slot.center_name];
+                                if (!coords) {
+                                    const entry = Object.entries(bordeauxCoordinates).find(([key]) =>
+                                        slot.center_name.toUpperCase().includes(key.toUpperCase()) ||
+                                        key.toUpperCase().includes(slot.center_name.toUpperCase())
+                                    );
+                                    if (entry) {
+                                        coords = entry[1];
+                                        normalizedName = entry[0];
+                                    }
+                                }
+                                return {
+                                    id: slot.id,
+                                    provider: slot.provider,
+                                    centerName: normalizedName,
+                                    courtName: slot.court_name,
+                                    startTime: new Date(slot.start_time),
+                                    endTime: new Date(slot.end_time),
+                                    durationMinutes: slot.duration_minutes,
+                                    price: parseFloat(slot.price),
+                                    currency: slot.currency,
+                                    bookingUrl: slot.booking_url,
+                                    lat: coords?.[0] || 44.84,
+                                    lng: coords?.[1] || -0.57
+                                };
+                            });
 
-                // 1. Fetch slots IDs for this poll
-                const { data: psData, error: psError } = await supabase
-                    .from('poll_slots')
-                    .select('slot_id')
-                    .eq('poll_id', pollId);
-
-                if (psError || !psData) return;
-                const ids = psData.map((ps: any) => ps.slot_id);
-                setSelectedSlots(ids);
-
-                // 2. Fetch full details for these slots (independently)
-                const { data: sData, error: sError } = await supabase
-                    .from('slots')
-                    .select('*')
-                    .in('id', ids);
-
-                if (sData) {
-                    const enriched = sData.map((slot: any) => {
-                        let normalizedName = slot.center_name;
-                        let coords = bordeauxCoordinates[slot.center_name];
-                        if (!coords) {
-                            const entry = Object.entries(bordeauxCoordinates).find(([key]) =>
-                                slot.center_name.toUpperCase().includes(key.toUpperCase()) ||
-                                key.toUpperCase().includes(slot.center_name.toUpperCase())
-                            );
-                            if (entry) {
-                                coords = entry[1];
-                                normalizedName = entry[0];
-                            }
-                        }
-                        return {
-                            id: slot.id,
-                            provider: slot.provider,
-                            centerName: normalizedName,
-                            courtName: slot.court_name,
-                            startTime: new Date(slot.start_time),
-                            endTime: new Date(slot.end_time),
-                            durationMinutes: slot.duration_minutes,
-                            price: parseFloat(slot.price),
-                            currency: slot.currency,
-                            bookingUrl: slot.booking_url,
-                            lat: coords?.[0] || 44.84,
-                            lng: coords?.[1] || -0.57
-                        };
-                    });
-                    setSlots(prev => {
-                        const existingIds = new Set(prev.map(s => s.id));
-                        const news = enriched.filter(s => !existingIds.has(s.id));
-                        return [...prev, ...news];
-                    });
-                } else if (sError) {
-                    console.error("Error fetching slots details:", sError);
-                }
-
-                // 3. Fetch Votes
-                const { data: vData } = await supabase
-                    .from('poll_votes')
-                    .select('*')
-                    .eq('poll_id', pollId);
-
-                if (vData) {
-                    setPollVotes(vData);
-                    // Try to extract creator name from votes if we still have 'Organisateur'
-                    const creatorVote = vData.find(v => v.user_id === creatorId);
-                    if (creatorVote?.user_name) {
-                        setPollCreatorName(creatorVote.user_name);
-                    } else if (!creatorProf && !user) {
-                        const firstVote = vData[0];
-                        if (firstVote?.user_name && firstVote.user_id === creatorId) {
-                            setPollCreatorName(firstVote.user_name);
+                            setSlots(prev => {
+                                const map = new Map(prev.map(s => [s.id, s]));
+                                enriched.forEach(s => map.set(s.id, s));
+                                return Array.from(map.values());
+                            });
                         }
                     }
+
+                    const { data: vData } = await supabase
+                        .from('poll_votes')
+                        .select('*')
+                        .eq('poll_id', pollId);
+
+                    if (vData) setPollVotes(vData);
+
+                    if (!user && !voterName) {
+                        setShowGuestNameModal(true);
+                    }
+                } catch (err) {
+                    console.error("Poll fetch total error:", err);
+                } finally {
+                    setIsLoadingPoll(false);
                 }
             };
             fetchPollData();
         }
-    }, [pollId, view]);
+    }, [pollId, view, user, voterName]);
 
     useEffect(() => {
         if (user && view === 'profile') {
@@ -2225,9 +2203,9 @@ export default function ClubBookingInterface({ user, initialPollId }: { user: Us
                                 chaudVotesBySlot[v.slot_id] = (chaudVotesBySlot[v.slot_id] || 0) + 1;
                             });
 
-                            // Ensure creator is counted for all slots IF not already in pollVotes
+                            // Ensure creator is counted for all slots IF not already in pollVotes (as a fallback for older polls)
                             pSlots.forEach(s => {
-                                const creatorVoted = pollVotes.some(v => v.slot_id === s.id && v.user_name === pollCreatorName);
+                                const creatorVoted = pollVotes.some(v => v.slot_id === s.id && (v.user_id === pollCreatorId || v.user_name === pollCreatorName));
                                 if (!creatorVoted) {
                                     chaudVotesBySlot[s.id] = (chaudVotesBySlot[s.id] || 0) + 1;
                                 }
@@ -2470,7 +2448,12 @@ export default function ClubBookingInterface({ user, initialPollId }: { user: Us
                                             </div>
                                         )}
 
-                                        {!isCreator && (
+                                        {isLoadingPoll ? (
+                                            <div style={{ marginBottom: '2.5rem', background: '#fff', padding: '3rem', borderRadius: '2rem', border: '1px solid rgba(0,0,0,0.05)', textAlign: 'center' }}>
+                                                <div style={{ width: 40, height: 40, border: '4px solid rgba(0,0,0,0.05)', borderTopColor: 'var(--sun-blaze)', borderRadius: '50%', animation: 'spin 1s linear infinite', margin: '0 auto 1.5rem' }} />
+                                                <div style={{ fontSize: '1.2rem', fontWeight: 700, opacity: 0.3 }}>Récupération du match...</div>
+                                            </div>
+                                        ) : !isCreator && (
                                             <div style={{ marginBottom: '2.5rem', background: '#fff', padding: '2rem', borderRadius: '2rem', border: '1px solid rgba(0,0,0,0.05)', textAlign: 'center' }}>
                                                 <div style={{ fontSize: '0.9rem', fontWeight: 800, color: 'var(--sun-blaze)', marginBottom: '0.5rem', textTransform: 'uppercase' }}>Sondage en cours</div>
                                                 <h2 style={{ fontSize: '2.5rem', fontWeight: 950, marginBottom: '0.5rem', letterSpacing: '-0.04em' }}>
@@ -2518,33 +2501,37 @@ export default function ClubBookingInterface({ user, initialPollId }: { user: Us
                                                                         <div style={{ fontSize: '0.8rem', fontWeight: 900, color: 'var(--sun-blaze)', marginTop: '0.4rem' }}>{slot.price}€ / joueur</div>
                                                                     </div>
                                                                     <div style={{ display: 'flex', alignItems: 'center' }}>
-                                                                        {votes.slice(0, 6).map((v, i) => (
-                                                                            <div
-                                                                                key={i}
-                                                                                title={v.user_name || (i === 0 ? pollCreatorName : 'Anonyme')}
-                                                                                style={{
-                                                                                    width: 34, height: 34, borderRadius: '50%',
-                                                                                    background: v.vote_value === false ? '#eee' : `hsl(${(i * 137) % 360}, 70%, 50%)`,
-                                                                                    border: '3px solid #fff',
-                                                                                    marginLeft: i === 0 ? 0 : -12,
-                                                                                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                                                                    color: v.vote_value === false ? '#aaa' : '#fff',
-                                                                                    fontSize: '0.7rem', fontWeight: 950,
-                                                                                    boxShadow: '0 4px 8px rgba(0,0,0,0.05)',
-                                                                                    zIndex: 20 - i,
-                                                                                    position: 'relative',
-                                                                                    textDecoration: v.vote_value === false ? 'line-through' : 'none',
-                                                                                    opacity: v.vote_value === false ? 0.7 : 1,
-                                                                                    cursor: 'help'
-                                                                                }}>
-                                                                                {(v.user_name && v.user_name.trim().toLowerCase() !== 'organisateur') ? v.user_name[0].toUpperCase() : (i === 0 ? (pollCreatorName?.[0]?.toUpperCase() || 'O') : 'O')}
-                                                                                {v.vote_value === false && (
-                                                                                    <div style={{ position: 'absolute', top: -2, right: -2, background: '#ff4444', borderRadius: '50%', width: 12, height: 12, display: 'flex', alignItems: 'center', justifyContent: 'center', border: '2px solid #fff' }}>
-                                                                                        <X size={8} color="#fff" strokeWidth={4} />
-                                                                                    </div>
-                                                                                )}
-                                                                            </div>
-                                                                        ))}
+                                                                        {votes.map((v, i) => {
+                                                                            const isCreatorVote = v.user_id === pollCreatorId || (v.user_name === pollCreatorName && i === 0);
+                                                                            const initials = (v.user_name && v.user_name.trim().toLowerCase() !== 'organisateur') ? v.user_name[0].toUpperCase() : (isCreatorVote ? (pollCreatorName?.[0]?.toUpperCase() || 'O') : 'O');
+                                                                            return (
+                                                                                <div
+                                                                                    key={i}
+                                                                                    title={v.user_name || (isCreatorVote ? pollCreatorName : 'Anonyme')}
+                                                                                    style={{
+                                                                                        width: 34, height: 34, borderRadius: '50%',
+                                                                                        background: v.vote_value === false ? '#eee' : `hsl(${(i * 137) % 360}, 70%, 50%)`,
+                                                                                        border: '3px solid #fff',
+                                                                                        marginLeft: i === 0 ? 0 : -12,
+                                                                                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                                                                        color: v.vote_value === false ? '#aaa' : '#fff',
+                                                                                        fontSize: '0.7rem', fontWeight: 950,
+                                                                                        boxShadow: '0 4px 8px rgba(0,0,0,0.05)',
+                                                                                        zIndex: 20 - i,
+                                                                                        position: 'relative',
+                                                                                        textDecoration: v.vote_value === false ? 'line-through' : 'none',
+                                                                                        opacity: v.vote_value === false ? 0.7 : 1,
+                                                                                        cursor: 'help'
+                                                                                    }}>
+                                                                                    {initials}
+                                                                                    {v.vote_value === false && (
+                                                                                        <div style={{ position: 'absolute', top: -2, right: -2, background: '#ff4444', borderRadius: '50%', width: 12, height: 12, display: 'flex', alignItems: 'center', justifyContent: 'center', border: '2px solid #fff' }}>
+                                                                                            <X size={8} color="#fff" strokeWidth={4} />
+                                                                                        </div>
+                                                                                    )}
+                                                                                </div>
+                                                                            );
+                                                                        })}
                                                                         {votes.length > 6 && (
                                                                             <div style={{ width: 34, height: 34, borderRadius: '50%', background: 'rgba(0,0,0,0.05)', border: '3px solid #fff', marginLeft: -12, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.7rem', fontWeight: 950, color: 'rgba(0,0,0,0.4)', zIndex: 0 }}>
                                                                                 +{votes.length - 6}
@@ -2607,32 +2594,38 @@ export default function ClubBookingInterface({ user, initialPollId }: { user: Us
                                                 exit={{ y: 100 }}
                                                 style={{
                                                     position: 'fixed',
-                                                    bottom: '2rem',
+                                                    bottom: '3rem',
                                                     left: '1.25rem',
                                                     right: '1.25rem',
-                                                    zIndex: 100,
+                                                    zIndex: 5000,
                                                     display: 'flex',
-                                                    justifyContent: 'center'
+                                                    justifyContent: 'center',
+                                                    pointerEvents: 'none'
                                                 }}
                                             >
                                                 <button
                                                     onClick={(e) => { e.stopPropagation(); if (!isSaving) saveVotes(); }}
                                                     disabled={isSaving}
                                                     style={{
-                                                        background: saveSuccess ? '#2E7D32' : '#1A1A1A',
+                                                        background: saveSuccess ? '#2E7D32' : '#FF6B00',
                                                         color: '#fff',
                                                         border: 'none',
-                                                        padding: '1.25rem 2.5rem',
-                                                        borderRadius: '1.5rem',
+                                                        padding: '1.25rem 3rem',
+                                                        borderRadius: '2rem',
                                                         fontWeight: 950,
-                                                        fontSize: '1rem',
-                                                        boxShadow: '0 20px 40px rgba(0,0,0,0.2)',
+                                                        fontSize: '1.1rem',
+                                                        boxShadow: '0 20px 60px rgba(255,107,0,0.4)',
                                                         cursor: isSaving ? 'default' : 'pointer',
                                                         display: 'flex',
                                                         alignItems: 'center',
                                                         gap: '0.75rem',
-                                                        transition: 'all 0.3s ease'
+                                                        transition: 'all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275)',
+                                                        pointerEvents: 'auto',
+                                                        transform: 'scale(1)',
+                                                        borderBottom: '4px solid rgba(0,0,0,0.2)'
                                                     }}
+                                                    onMouseOver={e => e.currentTarget.style.transform = 'scale(1.05) translateY(-5px)'}
+                                                    onMouseOut={e => e.currentTarget.style.transform = 'scale(1) translateY(0)'}
                                                 >
                                                     {isSaving ? (
                                                         <div style={{ width: 20, height: 20, border: '3px solid rgba(255,255,255,0.3)', borderTopColor: '#fff', borderRadius: '50%', animation: 'spin 1s linear infinite' }} />
