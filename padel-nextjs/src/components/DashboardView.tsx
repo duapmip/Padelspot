@@ -117,11 +117,12 @@ export default function DashboardView({ user, onNavigateToSearch, onViewPoll, on
                     .eq('user_id', user.id)
                     .order('created_at', { ascending: false });
 
-                // 2. Fetch polls where I voted (but didn't create)
+                // 2. Fetch polls where I voted (using name for now since user_id is missing in poll_votes)
+                const myName = (prof?.first_name || user.email?.split('@')[0])?.trim();
                 const { data: votedPollsIds } = await supabase
                     .from('poll_votes')
                     .select('poll_id')
-                    .eq('user_id', user.id);
+                    .eq('user_name', myName);
 
                 const otherPollIds = Array.from(new Set(votedPollsIds?.map(v => v.poll_id))).filter(id => !myPolls?.some(mp => mp.id === id));
 

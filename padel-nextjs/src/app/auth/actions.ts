@@ -96,8 +96,7 @@ export async function createPoll(slotIds: string[], targetVotersCount: number = 
             poll_id: poll.id,
             slot_id: s.slot_id,
             user_name: creatorName,
-            vote_value: true,
-            user_id: user.id
+            vote_value: true
         }));
 
         await supabase.from('poll_votes').insert(initialVotes);

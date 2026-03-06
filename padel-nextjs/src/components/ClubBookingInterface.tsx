@@ -2285,8 +2285,7 @@ export default function ClubBookingInterface({ user, initialPollId }: { user: Us
                                     poll_id: pollId,
                                     slot_id: v.slot_id,
                                     user_name: name,
-                                    vote_value: v.vote_value,
-                                    user_id: user?.id || null
+                                    vote_value: v.vote_value
                                 }));
 
                                 const { data, error: insertError } = await supabase.from('poll_votes').insert(votesToInsert).select();
