@@ -859,37 +859,45 @@ export default function ClubBookingInterface({ user, initialPollId }: { user: Us
     useEffect(() => {
         if (pollId && view === 'poll') {
             const fetchPollData = async () => {
+                console.log("Fetching poll data for ID:", pollId);
                 setIsLoadingPoll(true);
                 try {
+                    // Step 1: Attempt to get poll metadata
                     const { data: pollData, error: pError } = await supabase
                         .from('polls')
                         .select('target_voters_count, user_id, created_by, creator_name')
                         .eq('id', pollId)
                         .single();
 
-                    if (pError || !pollData) {
-                        setIsLoadingPoll(false);
-                        return;
+                    if (pollData) {
+                        setTargetVoters(pollData.target_voters_count || 4);
+                        const cId = pollData.created_by || pollData.user_id;
+                        setPollCreatorId(cId);
+                        setPollCreatorName(pollData.creator_name || 'Organisateur');
+                    } else {
+                        console.warn("Could not fetch poll metadata, check RLS or ID:", pError);
                     }
 
-                    setTargetVoters(pollData.target_voters_count);
-                    const creatorId = pollData.created_by || pollData.user_id;
-                    setPollCreatorId(creatorId);
-                    setPollCreatorName(pollData.creator_name || 'Organisateur');
-
-                    const { data: psData } = await supabase
+                    // Step 2: Fetch Slot IDs (The most important part for visibility)
+                    const { data: psData, error: psError } = await supabase
                         .from('poll_slots')
                         .select('slot_id')
                         .eq('poll_id', pollId);
 
-                    const ids = psData?.map((ps: any) => ps.slot_id) || [];
-                    setSelectedSlots(ids);
+                    if (psError) console.error("Poll slots fetch error:", psError);
 
-                    if (ids.length > 0) {
-                        const { data: sData } = await supabase
+                    const slotIds = psData?.map((ps: any) => ps.slot_id) || [];
+                    console.log("Slot IDs found for this poll:", slotIds);
+                    setSelectedSlots(slotIds);
+
+                    if (slotIds.length > 0) {
+                        // Step 3: Fetch Full Slot Details
+                        const { data: sData, error: sError } = await supabase
                             .from('slots')
                             .select('*')
-                            .in('id', ids);
+                            .in('id', slotIds);
+
+                        if (sError) console.error("Slots details fetch error:", sError);
 
                         if (sData) {
                             const enriched = sData.map((slot: any) => {
@@ -929,18 +937,21 @@ export default function ClubBookingInterface({ user, initialPollId }: { user: Us
                         }
                     }
 
-                    const { data: vData } = await supabase
+                    // Step 4: Fetch Votes
+                    const { data: vData, error: vError } = await supabase
                         .from('poll_votes')
                         .select('*')
                         .eq('poll_id', pollId);
 
+                    if (vError) console.error("Votes fetch error:", vError);
                     if (vData) setPollVotes(vData);
 
+                    // Name prompting logic for guests
                     if (!user && !voterName) {
                         setShowGuestNameModal(true);
                     }
                 } catch (err) {
-                    console.error("Poll fetch total error:", err);
+                    console.error("Critical error in fetchPollData:", err);
                 } finally {
                     setIsLoadingPoll(false);
                 }
