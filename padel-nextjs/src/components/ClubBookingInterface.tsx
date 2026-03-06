@@ -941,7 +941,7 @@ export default function ClubBookingInterface({ user, initialPollId }: { user: Us
                     // Explicit select to avoid 400 errors if some columns are missing
                     const { data: vData, error: vError } = await supabase
                         .from('poll_votes')
-                        .select('slot_id, user_name, vote_value')
+                        .select('id, slot_id, user_name, vote_value')
                         .eq('poll_id', pollId);
 
                     if (vError) console.error("Votes fetch error:", vError);
