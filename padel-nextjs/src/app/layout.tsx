@@ -7,6 +7,7 @@ export const metadata: Metadata = {
   description: "Recherche et réservation de terrains de Padel, simplifiées.",
   icons: {
     icon: "/favicon.png?v=2",
+    shortcut: "/favicon.ico?v=2",
     apple: "/favicon.png?v=2",
   },
 };
