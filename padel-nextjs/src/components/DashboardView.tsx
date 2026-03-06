@@ -550,7 +550,7 @@ export default function DashboardView({ user, onNavigateToSearch, onViewPoll, on
                                     </div>
 
                                     {poll.is_ready_to_book && (
-                                        <button onClick={(e) => { e.stopPropagation(); setShowValidationPopup({ id: poll.id, club: "Big Padel" }); }} style={{ width: '100%', padding: '12px', background: '#1A1A1A', color: '#FFF', borderRadius: '14px', fontWeight: 800, fontSize: '13px', border: 'none', cursor: 'pointer', marginTop: '16px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
+                                        <button onClick={(e) => { e.stopPropagation(); onViewPoll(poll.id); }} style={{ width: '100%', padding: '12px', background: '#1A1A1A', color: '#FFF', borderRadius: '14px', fontWeight: 800, fontSize: '13px', border: 'none', cursor: 'pointer', marginTop: '16px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
                                             <Check size={16} /> Réserver
                                         </button>
                                     )}
