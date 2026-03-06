@@ -6,8 +6,8 @@ export const metadata: Metadata = {
   title: "PadelSpot",
   description: "Recherche et réservation de terrains de Padel, simplifiées.",
   icons: {
-    icon: "/icon.png",
-    apple: "/icon.png",
+    icon: "/favicon.png?v=2",
+    apple: "/favicon.png?v=2",
   },
 };
 
