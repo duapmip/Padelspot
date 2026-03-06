@@ -887,80 +887,77 @@ export default function ClubBookingInterface({ user, initialPollId }: { user: Us
                     if (!user && !voterName) {
                         setShowGuestNameModal(true);
                     }
-                }
 
-                // 1. Fetch slots IDs for this poll
-                const { data: psData, error: psError } = await supabase
-                    .from('poll_slots')
-                    .select('slot_id')
-                    .eq('poll_id', pollId);
+                    // 1. Fetch slots IDs for this poll
+                    const { data: psData, error: psError } = await supabase
+                        .from('poll_slots')
+                        .select('slot_id')
+                        .eq('poll_id', pollId);
 
-                if (psError || !psData) return;
-                const ids = psData.map((ps: any) => ps.slot_id);
-                setSelectedSlots(ids);
+                    if (psError || !psData) return;
+                    const ids = psData.map((ps: any) => ps.slot_id);
+                    setSelectedSlots(ids);
 
-                // 2. Fetch full details for these slots (if not already in slots state)
-                const { data: sData } = await supabase
-                    .from('slots')
-                    .select('*')
-                    .in('id', ids);
+                    // 2. Fetch full details for these slots (if not already in slots state)
+                    const { data: sData } = await supabase
+                        .from('slots')
+                        .select('*')
+                        .in('id', ids);
 
-                if (sData) {
-                    const enriched = sData.map((slot: any) => {
-                        let normalizedName = slot.center_name;
-                        let coords = bordeauxCoordinates[slot.center_name];
-                        if (!coords) {
-                            const entry = Object.entries(bordeauxCoordinates).find(([key]) =>
-                                slot.center_name.toUpperCase().includes(key.toUpperCase()) ||
-                                key.toUpperCase().includes(slot.center_name.toUpperCase())
-                            );
-                            if (entry) {
-                                coords = entry[1];
-                                normalizedName = entry[0];
+                    if (sData) {
+                        const enriched = sData.map((slot: any) => {
+                            let normalizedName = slot.center_name;
+                            let coords = bordeauxCoordinates[slot.center_name];
+                            if (!coords) {
+                                const entry = Object.entries(bordeauxCoordinates).find(([key]) =>
+                                    slot.center_name.toUpperCase().includes(key.toUpperCase()) ||
+                                    key.toUpperCase().includes(slot.center_name.toUpperCase())
+                                );
+                                if (entry) {
+                                    coords = entry[1];
+                                    normalizedName = entry[0];
+                                }
                             }
-                        }
-                        return {
-                            id: slot.id,
-                            provider: slot.provider,
-                            centerName: normalizedName,
-                            courtName: slot.court_name,
-                            startTime: new Date(slot.start_time),
-                            endTime: new Date(slot.end_time),
-                            durationMinutes: slot.duration_minutes,
-                            price: parseFloat(slot.price),
-                            currency: slot.currency,
-                            bookingUrl: slot.booking_url,
-                            lat: coords?.[0] || 44.84,
-                            lng: coords?.[1] || -0.57
-                        };
-                    });
-                    setSlots(prev => {
-                        const existingIds = new Set(prev.map(s => s.id));
-                        const news = enriched.filter(s => !existingIds.has(s.id));
-                        return [...prev, ...news];
-                    });
-                }
+                            return {
+                                id: slot.id,
+                                provider: slot.provider,
+                                centerName: normalizedName,
+                                courtName: slot.court_name,
+                                startTime: new Date(slot.start_time),
+                                endTime: new Date(slot.end_time),
+                                durationMinutes: slot.duration_minutes,
+                                price: parseFloat(slot.price),
+                                currency: slot.currency,
+                                bookingUrl: slot.booking_url,
+                                lat: coords?.[0] || 44.84,
+                                lng: coords?.[1] || -0.57
+                            };
+                        });
+                        setSlots(prev => {
+                            const existingIds = new Set(prev.map(s => s.id));
+                            const news = enriched.filter(s => !existingIds.has(s.id));
+                            return [...prev, ...news];
+                        });
+                    }
 
-                // 3. Fetch Votes
-                const { data: vData } = await supabase
-                    .from('poll_votes')
-                    .select('*')
-                    .eq('poll_id', pollId);
+                    // 3. Fetch Votes
+                    const { data: vData } = await supabase
+                        .from('poll_votes')
+                        .select('*')
+                        .eq('poll_id', pollId);
 
-                if (vData) {
-                    setPollVotes(vData);
-                    // Try to extract creator name from votes if we still have 'Organisateur'
-                    const creatorId = pollData?.created_by || pollData?.user_id;
-                    const creatorVote = vData.find(v => v.user_id === creatorId);
-                    if (creatorVote?.user_name) {
-                        setPollCreatorName(creatorVote.user_name);
-                    } else if (!creatorProf && !user) {
-                        // In incognito, if we still have nothing, try to find ANY vote with that user_id
-                        // but wait, we already did 'find'.
-                        // Maybe the creator name is in the first vote?
-                        const firstVote = vData[0];
-                        if (firstVote?.user_name && firstVote.user_id === creatorId) {
-                            setPollCreatorName(firstVote.user_name);
+                    if (vData) {
+                        setPollVotes(vData);
+                        // Try to extract creator name from votes if we still have 'Organisateur'
+                        const creatorVote = vData.find(v => v.user_id === creatorId);
+                        if (creatorVote?.user_name) {
+                            setPollCreatorName(creatorVote.user_name);
+                        } else if (!creatorProf && !user) {
+                            // In incognito, if we still have nothing, try to find ANY vote with that user_id
+                            const firstVote = vData[0];
+                            if (firstVote?.user_name && firstVote.user_id === creatorId) {
+                                setPollCreatorName(firstVote.user_name);
+                            }
                         }
                     }
                 }
