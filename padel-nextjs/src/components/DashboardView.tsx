@@ -110,17 +110,44 @@ export default function DashboardView({ user, onNavigateToSearch, onViewPoll, on
                 setProfile(prof);
 
                 // Polls
-                const { data: myPolls } = await supabase.from('polls').select('*, poll_votes(id)').eq('user_id', user.id).order('created_at', { ascending: false });
+                const { data: myPolls, error: pollErr } = await supabase
+                    .from('polls')
+                    .select('*, poll_votes(*)')
+                    .eq('user_id', user.id)
+                    .order('created_at', { ascending: false });
+
+                if (pollErr) console.error("Polls fetch error:", pollErr);
+
                 if (myPolls) {
-                    setPolls(myPolls.map(p => ({
-                        id: p.id,
-                        created_at: p.created_at,
-                        target_voters_count: p.target_voters_count,
-                        votes_count: p.poll_votes?.length || 0,
-                        creator_name: 'Moi',
-                        is_ready_to_book: (p.poll_votes?.length || 0) >= p.target_voters_count,
-                        is_validated: p.is_validated || false
-                    })));
+                    setPolls(myPolls.map(p => {
+                        const votesBySlot: Record<string, number> = {};
+                        const uniqueVoters = new Set();
+                        // Always include creator
+                        uniqueVoters.add(p.user_id);
+
+                        (p.poll_votes || []).forEach((v: any) => {
+                            if (v.vote_value !== false) {
+                                votesBySlot[v.slot_id] = (votesBySlot[v.slot_id] || 0) + 1;
+                            }
+                            uniqueVoters.add(v.user_id || v.user_name);
+                        });
+
+                        // Add creator's implied vote to each slot's count for readiness
+                        // (Assuming they are 'Chaud' for all slots they selected initially)
+                        const values = Object.values(votesBySlot).map(count => count + 1);
+                        if (values.length === 0) values.push(1); // At least the creator
+                        const maxVotesOnASlot = values.length > 0 ? Math.max(...values) : 0;
+
+                        return {
+                            id: p.id,
+                            created_at: p.created_at,
+                            target_voters_count: p.target_voters_count || 4,
+                            votes_count: uniqueVoters.size,
+                            creator_name: 'Moi',
+                            is_ready_to_book: maxVotesOnASlot >= (p.target_voters_count || 4),
+                            is_validated: p.is_validated || false
+                        };
+                    }));
                 }
 
                 setInvites([]);

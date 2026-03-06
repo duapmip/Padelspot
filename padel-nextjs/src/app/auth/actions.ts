@@ -64,11 +64,15 @@ export async function createPoll(slotIds: string[], targetVotersCount: number = 
 
     if (!user) return { error: 'User not authenticated' }
 
+    const { data: profile } = await supabase.from('profiles').select('first_name').eq('id', user.id).single();
+    const creatorName = profile?.first_name || user.email?.split('@')[0] || 'Organisateur';
+
     const { data: poll, error: pollError } = await supabase
         .from('polls')
         .insert({
             user_id: user.id,
-            target_voters_count: targetVotersCount
+            target_voters_count: targetVotersCount,
+            creator_name: creatorName
         })
         .select()
         .single()
@@ -87,14 +91,10 @@ export async function createPoll(slotIds: string[], targetVotersCount: number = 
 
     if (slotsError) return { error: slotsError.message };
 
-    // Automatically mark creator as 'Chaud' (true) on all their selected slots
-    const { data: profile } = await supabase.from('profiles').select('first_name').eq('id', user.id).single();
-    const creatorName = profile?.first_name || user.email?.split('@')[0] || 'Organisateur';
-
     if (createdSlots && createdSlots.length > 0) {
         const initialVotes = createdSlots.map(s => ({
             poll_id: poll.id,
-            slot_id: s.slot_id, // Match the actual slot ID from the slots table
+            slot_id: s.slot_id,
             user_name: creatorName,
             vote_value: true,
             user_id: user.id

@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { format, parseISO, addDays, startOfToday, eachDayOfInterval, isSameDay, startOfWeek, endOfWeek } from 'date-fns';
 import { fr } from 'date-fns/locale';
-import { ArrowRight, Zap, Filter, X, ChevronLeft, ChevronRight, ChevronUp, Plus, MapPin, Calendar, Users, CheckCircle2, UserPlus, Share2, Check, Lock, Heart, Trash2 } from 'lucide-react';
+import { ArrowRight, Zap, Filter, X, ChevronLeft, ChevronRight, ChevronUp, Plus, MapPin, Calendar, Users, CheckCircle2, UserPlus, Share2, Check, Lock, Heart, Trash2, User as UserIcon } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import dynamic from 'next/dynamic';
 // Leaflet is loaded dynamically only client-side
@@ -814,8 +814,23 @@ export default function ClubBookingInterface({ user, initialPollId }: { user: Us
     const [userPolls, setUserPolls] = useState<any[]>([]);
     const [pollId, setPollId] = useState<string | null>(initialPollId || null);
     const [pollCreatorId, setPollCreatorId] = useState<string | null>(null);
-    const [pollCreatorName, setPollCreatorName] = useState<string>('');
-    const [voterName, setVoterName] = useState(guestNameParam || '');
+    const [pollCreatorName, setPollCreatorName] = useState<string>('Organisateur');
+    const [voterName, setVoterName] = useState(() => {
+        if (typeof window !== 'undefined') {
+            return guestNameParam || localStorage.getItem('padelspot_guest_name') || '';
+        }
+        return guestNameParam || '';
+    });
+
+    useEffect(() => {
+        if (typeof window !== 'undefined' && voterName) {
+            localStorage.setItem('padelspot_guest_name', voterName);
+        }
+    }, [voterName]);
+    const [showGuestNameModal, setShowGuestNameModal] = useState(false);
+    const [isVotesDirty, setIsVotesDirty] = useState(false);
+    const [isSaving, setIsSaving] = useState(false);
+    const [saveSuccess, setSaveSuccess] = useState(false);
     const [showAuthModal, setShowAuthModal] = useState(false);
     const [showSelectedModal, setShowSelectedModal] = useState(false);
     const [targetVoters, setTargetVoters] = useState(4);
@@ -846,21 +861,32 @@ export default function ClubBookingInterface({ user, initialPollId }: { user: Us
                 // 0. Fetch poll details
                 const { data: pollData } = await supabase
                     .from('polls')
-                    .select('target_voters_count, user_id, created_by')
+                    .select('target_voters_count, user_id, created_by, creator_name')
                     .eq('id', pollId)
                     .single();
                 if (pollData) {
                     setTargetVoters(pollData.target_voters_count);
-                    const creatorId = pollData.created_by || pollData.user_id; // Check both in case of migration
+                    const creatorId = pollData.created_by || pollData.user_id;
                     setPollCreatorId(creatorId);
 
-                    // Fetch Creator Name
+                    // Fetch Creator Name with better fallback
                     const { data: creatorProf } = await supabase
                         .from('profiles')
-                        .select('first_name')
+                        .select('first_name, email')
                         .eq('id', creatorId)
                         .single();
-                    if (creatorProf) setPollCreatorName(creatorProf.first_name || 'Un pote');
+
+                    const bestName = pollData?.creator_name ||
+                        creatorProf?.first_name ||
+                        creatorProf?.email?.split('@')[0] ||
+                        (user && creatorId === user.id ? (profileFields.firstName || user.email?.split('@')[0]) : null);
+
+                    if (bestName) setPollCreatorName(bestName);
+
+                    // Show name prompt for guests if not already set
+                    if (!user && !voterName) {
+                        setShowGuestNameModal(true);
+                    }
                 }
 
                 // 1. Fetch slots IDs for this poll
@@ -921,7 +947,23 @@ export default function ClubBookingInterface({ user, initialPollId }: { user: Us
                     .select('*')
                     .eq('poll_id', pollId);
 
-                if (vData) setPollVotes(vData);
+                if (vData) {
+                    setPollVotes(vData);
+                    // Try to extract creator name from votes if we still have 'Organisateur'
+                    const creatorId = pollData?.created_by || pollData?.user_id;
+                    const creatorVote = vData.find(v => v.user_id === creatorId);
+                    if (creatorVote?.user_name) {
+                        setPollCreatorName(creatorVote.user_name);
+                    } else if (!creatorProf && !user) {
+                        // In incognito, if we still have nothing, try to find ANY vote with that user_id
+                        // but wait, we already did 'find'.
+                        // Maybe the creator name is in the first vote?
+                        const firstVote = vData[0];
+                        if (firstVote?.user_name && firstVote.user_id === creatorId) {
+                            setPollCreatorName(firstVote.user_name);
+                        }
+                    }
+                }
             };
             fetchPollData();
         }
@@ -2170,9 +2212,26 @@ export default function ClubBookingInterface({ user, initialPollId }: { user: Us
                             const pSlots = selectedSlots.map(id => slots.find(s => s.id === id)).filter(Boolean) as any[];
                             const sortedSlots = [...pSlots].sort((a, b) => a.startTime.getTime() - b.startTime.getTime());
 
-                            const uniqueVoters = Array.from(new Set(pollVotes.map(v => v.user_name)));
-                            const voterCount = uniqueVoters.length;
-                            const progress = Math.min((voterCount / targetVoters) * 100, 100);
+                            const uniqueVotersSet = new Set(pollVotes.map(v => v.user_name));
+                            // Add creator explicitly
+                            uniqueVotersSet.add(pollCreatorName);
+                            const voterCount = uniqueVotersSet.size;
+
+                            // Progress is based on the most popular slot (at least 4 votes as per user request)
+                            const chaudVotesBySlot: Record<string, number> = {};
+
+                            // Include DB votes
+                            pollVotes.filter(v => v.vote_value === true).forEach(v => {
+                                chaudVotesBySlot[v.slot_id] = (chaudVotesBySlot[v.slot_id] || 0) + 1;
+                            });
+
+                            // Always include creator as a 'Chaud' vote for every slot
+                            pSlots.forEach(s => {
+                                chaudVotesBySlot[s.id] = (chaudVotesBySlot[s.id] || 0) + 1;
+                            });
+
+                            const maxVotesOnASlot = Math.max(0, ...Object.values(chaudVotesBySlot));
+                            const progress = Math.min((maxVotesOnASlot / targetVoters) * 100, 100);
 
                             // Get days that have slots for the mini-calendar
                             const slotsByDay = sortedSlots.reduce((acc: Record<string, any[]>, s) => {
@@ -2183,50 +2242,70 @@ export default function ClubBookingInterface({ user, initialPollId }: { user: Us
                             }, {});
                             const activeDays = Object.keys(slotsByDay).sort();
 
-                            const handleQuickVote = async (slotId: string, isChaud: boolean) => {
+                            const handleQuickVote = (slotId: string, isChaud: boolean) => {
                                 const name = user ? (profileFields.firstName || user.email?.split('@')[0]) : voterName;
                                 if (!name) {
-                                    const entry = prompt("Ton prénom / Surnom pour voter :");
-                                    if (!entry) return;
-                                    setVoterName(entry);
-                                    // Recurse once with the new name
-                                    setTimeout(() => handleQuickVote(slotId, isChaud), 100);
+                                    setShowGuestNameModal(true);
                                     return;
                                 }
 
+                                setIsVotesDirty(true);
                                 const existing = pollVotes.find(v => v.slot_id === slotId && v.user_name === name);
 
                                 if (existing && existing.vote_value === isChaud) {
-                                    // If clicking the same button again, do nothing or toggle?
-                                    // Let's toggle off if they click the same one again.
+                                    // Toggle off
                                     setPollVotes(prev => prev.filter(v => v.id !== existing.id));
-                                    await supabase.from('poll_votes').delete().eq('id', existing.id);
                                     return;
                                 }
 
-                                const newVoteData = {
-                                    poll_id: pollId,
-                                    slot_id: slotId,
-                                    user_name: name,
-                                    vote_value: isChaud
-                                };
-
                                 if (existing) {
-                                    // Update existing
-                                    const { data, error } = await supabase.from('poll_votes').update(newVoteData).eq('id', existing.id).select().single();
-                                    if (!error && data) {
-                                        setPollVotes(prev => prev.map(v => v.id === existing.id ? data : v));
-                                    }
+                                    // Switch vote directly
+                                    setPollVotes(prev => prev.map(v => v.id === existing.id ? { ...v, vote_value: isChaud } : v));
                                 } else {
-                                    // Insert new
-                                    const { data, error } = await supabase.from('poll_votes').insert(newVoteData).select().single();
-                                    if (!error && data) {
-                                        setPollVotes(prev => [...prev, data]);
-                                    } else {
-                                        // Local fallback
-                                        setPollVotes(prev => [...prev, { id: Math.random().toString(), ...newVoteData }]);
-                                    }
+                                    // Add new locally
+                                    setPollVotes(prev => [...prev, {
+                                        id: `temp-${Math.random()}`,
+                                        poll_id: pollId,
+                                        slot_id: slotId,
+                                        user_name: name,
+                                        vote_value: isChaud,
+                                        is_temp: true
+                                    }]);
                                 }
+                            };
+
+                            const saveVotes = async () => {
+                                setIsSaving(true);
+                                const name = user ? (profileFields.firstName || user.email?.split('@')[0]) : voterName;
+                                if (!name) {
+                                    setIsSaving(false);
+                                    return;
+                                }
+
+                                const myVotes = pollVotes.filter(v => v.user_name === name);
+
+                                // Clean up old votes in DB for this user/poll
+                                await supabase.from('poll_votes').delete().eq('poll_id', pollId).eq('user_name', name);
+
+                                // Insert new votes
+                                const votesToInsert = myVotes.map(v => ({
+                                    poll_id: pollId,
+                                    slot_id: v.slot_id,
+                                    user_name: name,
+                                    vote_value: v.vote_value,
+                                    user_id: user?.id || null
+                                }));
+
+                                const { data, error: insertError } = await supabase.from('poll_votes').insert(votesToInsert).select();
+                                if (!insertError) {
+                                    // Refresh local state with real IDs
+                                    const others = pollVotes.filter(v => v.user_name !== name);
+                                    setPollVotes([...others, ...(data || [])]);
+                                    setIsVotesDirty(false);
+                                    setSaveSuccess(true);
+                                    setTimeout(() => setSaveSuccess(false), 3000);
+                                }
+                                setIsSaving(false);
                             };
 
                             const scrollToDay = (dayKey: string) => {
@@ -2387,6 +2466,16 @@ export default function ClubBookingInterface({ user, initialPollId }: { user: Us
                                                 </div>
                                             </div>
                                         )}
+
+                                        {!isCreator && (
+                                            <div style={{ marginBottom: '2.5rem', background: '#fff', padding: '2rem', borderRadius: '2rem', border: '1px solid rgba(0,0,0,0.05)', textAlign: 'center' }}>
+                                                <div style={{ fontSize: '0.9rem', fontWeight: 800, color: 'var(--sun-blaze)', marginBottom: '0.5rem', textTransform: 'uppercase' }}>Sondage en cours</div>
+                                                <h2 style={{ fontSize: '2.5rem', fontWeight: 950, marginBottom: '0.5rem', letterSpacing: '-0.04em' }}>
+                                                    {voterName ? `Salut ${voterName} !` : `Salut !`}
+                                                </h2>
+                                                <p style={{ color: '#666', fontWeight: 600, fontSize: '1.1rem' }}>On attend tes dispos pour jouer avec {pollCreatorName}</p>
+                                            </div>
+                                        )}
                                         {Object.entries(slotsByDay).map(([dayKey, daySlots]: [string, any]) => (
                                             <div key={dayKey} id={`poll-day-${dayKey}`} style={{ marginBottom: '2.5rem' }}>
                                                 <div style={{ fontSize: '0.75rem', fontWeight: 950, textTransform: 'uppercase', color: 'rgba(0,0,0,0.3)', marginBottom: '1rem', letterSpacing: '0.05em' }}>
@@ -2398,16 +2487,27 @@ export default function ClubBookingInterface({ user, initialPollId }: { user: Us
                                                         const dbVotes = pollVotes.filter(v => v.slot_id === slot.id);
                                                         // Inject creator vote if not present
                                                         let votes = [...dbVotes];
-                                                        const creatorInVotes = votes.find(v => v.user_name === pollCreatorName);
+                                                        const creatorInVotes = votes.find(v => v.user_name === (pollCreatorName || 'Organisateur'));
                                                         if (!creatorInVotes) {
-                                                            votes = [{ user_name: pollCreatorName, vote_value: true }, ...votes];
+                                                            votes = [{ user_name: pollCreatorName || 'Organisateur', vote_value: true }, ...votes];
                                                         }
 
                                                         const name = user ? (profileFields.firstName || user.email?.split('@')[0]) : voterName;
+                                                        const userVote = dbVotes.find(v => v.user_name === name);
+                                                        const isNotAvailable = userVote?.vote_value === false;
                                                         const hasVoted = dbVotes.some(v => v.user_name === name);
 
                                                         return (
-                                                            <div key={slot.id} style={{ background: '#fff', borderRadius: '1.75rem', padding: '1.5rem', boxShadow: '0 10px 30px rgba(0,0,0,0.03)', border: '1px solid rgba(0,0,0,0.02)' }}>
+                                                            <div key={slot.id} style={{
+                                                                background: '#fff',
+                                                                borderRadius: '1.75rem',
+                                                                padding: '1.5rem',
+                                                                boxShadow: '0 10px 30px rgba(0,0,0,0.03)',
+                                                                border: '1px solid rgba(0,0,0,0.02)',
+                                                                opacity: isNotAvailable ? 0.6 : 1,
+                                                                filter: isNotAvailable ? 'grayscale(0.5)' : 'none',
+                                                                transition: 'all 0.3s ease'
+                                                            }}>
                                                                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1.25rem' }}>
                                                                     <div>
                                                                         <div style={{ fontSize: '2rem', fontWeight: 950, letterSpacing: '-0.03em', lineHeight: 1 }}>{format(slot.startTime, 'HH:mm')}</div>
@@ -2416,21 +2516,25 @@ export default function ClubBookingInterface({ user, initialPollId }: { user: Us
                                                                     </div>
                                                                     <div style={{ display: 'flex', alignItems: 'center' }}>
                                                                         {votes.slice(0, 6).map((v, i) => (
-                                                                            <div key={i} style={{
-                                                                                width: 34, height: 34, borderRadius: '50%',
-                                                                                background: v.vote_value === false ? '#eee' : `hsl(${(i * 137) % 360}, 70%, 50%)`,
-                                                                                border: '3px solid #fff',
-                                                                                marginLeft: i === 0 ? 0 : -12,
-                                                                                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                                                                color: v.vote_value === false ? '#aaa' : '#fff',
-                                                                                fontSize: '0.7rem', fontWeight: 950,
-                                                                                boxShadow: '0 4px 8px rgba(0,0,0,0.05)',
-                                                                                zIndex: 10 - i,
-                                                                                position: 'relative',
-                                                                                textDecoration: v.vote_value === false ? 'line-through' : 'none',
-                                                                                opacity: v.vote_value === false ? 0.7 : 1
-                                                                            }}>
-                                                                                {(v.user_name && v.user_name.length > 0) ? v.user_name[0].toUpperCase() : '?'}
+                                                                            <div
+                                                                                key={i}
+                                                                                title={v.user_name || (i === 0 ? pollCreatorName : 'Anonyme')}
+                                                                                style={{
+                                                                                    width: 34, height: 34, borderRadius: '50%',
+                                                                                    background: v.vote_value === false ? '#eee' : `hsl(${(i * 137) % 360}, 70%, 50%)`,
+                                                                                    border: '3px solid #fff',
+                                                                                    marginLeft: i === 0 ? 0 : -12,
+                                                                                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                                                                    color: v.vote_value === false ? '#aaa' : '#fff',
+                                                                                    fontSize: '0.7rem', fontWeight: 950,
+                                                                                    boxShadow: '0 4px 8px rgba(0,0,0,0.05)',
+                                                                                    zIndex: 20 - i,
+                                                                                    position: 'relative',
+                                                                                    textDecoration: v.vote_value === false ? 'line-through' : 'none',
+                                                                                    opacity: v.vote_value === false ? 0.7 : 1,
+                                                                                    cursor: 'help'
+                                                                                }}>
+                                                                                {(v.user_name && v.user_name.trim().toLowerCase() !== 'organisateur') ? v.user_name[0].toUpperCase() : (i === 0 ? (pollCreatorName?.[0]?.toUpperCase() || 'O') : 'O')}
                                                                                 {v.vote_value === false && (
                                                                                     <div style={{ position: 'absolute', top: -2, right: -2, background: '#ff4444', borderRadius: '50%', width: 12, height: 12, display: 'flex', alignItems: 'center', justifyContent: 'center', border: '2px solid #fff' }}>
                                                                                         <X size={8} color="#fff" strokeWidth={4} />
@@ -2447,43 +2551,42 @@ export default function ClubBookingInterface({ user, initialPollId }: { user: Us
                                                                     </div>
                                                                 </div>
 
-                                                                {!isCreator && (
-                                                                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
-                                                                        <button
-                                                                            onClick={() => handleQuickVote(slot.id, true)}
-                                                                            style={{
-                                                                                background: hasVoted && votes.find(v => v.user_name === name)?.vote_value === true ? 'var(--sun-blaze)' : 'rgba(0,0,0,0.03)',
-                                                                                color: hasVoted && votes.find(v => v.user_name === name)?.vote_value === true ? '#fff' : 'var(--pitch-black)',
-                                                                                border: 'none',
-                                                                                padding: '1rem',
-                                                                                borderRadius: '1.25rem',
-                                                                                fontWeight: 950,
-                                                                                fontSize: '0.85rem',
-                                                                                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem',
-                                                                                cursor: 'pointer',
-                                                                                transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)'
-                                                                            }}
-                                                                        >
-                                                                            <Check size={18} strokeWidth={3} /> CHAUD
-                                                                        </button>
-                                                                        <button
-                                                                            onClick={() => handleQuickVote(slot.id, false)}
-                                                                            style={{
-                                                                                background: hasVoted && votes.find(v => v.user_name === name)?.vote_value === false ? '#ff4444' : 'rgba(0,0,0,0.03)',
-                                                                                color: hasVoted && votes.find(v => v.user_name === name)?.vote_value === false ? '#fff' : 'rgba(0,0,0,0.3)',
-                                                                                border: 'none',
-                                                                                padding: '1rem',
-                                                                                borderRadius: '1.25rem',
-                                                                                fontWeight: 950,
-                                                                                fontSize: '0.85rem',
-                                                                                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem',
-                                                                                cursor: 'pointer'
-                                                                            }}
-                                                                        >
-                                                                            <X size={18} strokeWidth={3} /> PAS DISPO
-                                                                        </button>
-                                                                    </div>
-                                                                )}
+                                                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
+                                                                    <button
+                                                                        onClick={() => handleQuickVote(slot.id, true)}
+                                                                        style={{
+                                                                            background: userVote?.vote_value === true ? 'var(--sun-blaze)' : 'rgba(0,0,0,0.03)',
+                                                                            color: userVote?.vote_value === true ? '#fff' : 'var(--pitch-black)',
+                                                                            border: 'none',
+                                                                            padding: '1rem',
+                                                                            borderRadius: '1.25rem',
+                                                                            fontWeight: 950,
+                                                                            fontSize: '0.85rem',
+                                                                            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem',
+                                                                            cursor: 'pointer',
+                                                                            transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)'
+                                                                        }}
+                                                                    >
+                                                                        <Check size={18} strokeWidth={3} /> CHAUD
+                                                                    </button>
+                                                                    <button
+                                                                        onClick={() => handleQuickVote(slot.id, false)}
+                                                                        style={{
+                                                                            background: userVote?.vote_value === false ? '#ff4444' : 'rgba(0,0,0,0.03)',
+                                                                            color: userVote?.vote_value === false ? '#fff' : 'rgba(0,0,0,0.3)',
+                                                                            border: 'none',
+                                                                            padding: '1rem',
+                                                                            borderRadius: '1.25rem',
+                                                                            fontWeight: 950,
+                                                                            fontSize: '0.85rem',
+                                                                            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem',
+                                                                            cursor: 'pointer',
+                                                                            transition: 'all 0.2s'
+                                                                        }}
+                                                                    >
+                                                                        <X size={18} strokeWidth={3} /> PAS DISPO
+                                                                    </button>
+                                                                </div>
                                                             </div>
                                                         );
                                                     })}
@@ -2493,12 +2596,134 @@ export default function ClubBookingInterface({ user, initialPollId }: { user: Us
 
                                     </div>
 
+                                    <AnimatePresence>
+                                        {isVotesDirty && (
+                                            <motion.div
+                                                initial={{ y: 100 }}
+                                                animate={{ y: 0 }}
+                                                exit={{ y: 100 }}
+                                                style={{
+                                                    position: 'fixed',
+                                                    bottom: '2rem',
+                                                    left: '1.25rem',
+                                                    right: '1.25rem',
+                                                    zIndex: 100,
+                                                    display: 'flex',
+                                                    justifyContent: 'center'
+                                                }}
+                                            >
+                                                <button
+                                                    onClick={(e) => { e.stopPropagation(); if (!isSaving) saveVotes(); }}
+                                                    disabled={isSaving}
+                                                    style={{
+                                                        background: saveSuccess ? '#2E7D32' : '#1A1A1A',
+                                                        color: '#fff',
+                                                        border: 'none',
+                                                        padding: '1.25rem 2.5rem',
+                                                        borderRadius: '1.5rem',
+                                                        fontWeight: 950,
+                                                        fontSize: '1rem',
+                                                        boxShadow: '0 20px 40px rgba(0,0,0,0.2)',
+                                                        cursor: isSaving ? 'default' : 'pointer',
+                                                        display: 'flex',
+                                                        alignItems: 'center',
+                                                        gap: '0.75rem',
+                                                        transition: 'all 0.3s ease'
+                                                    }}
+                                                >
+                                                    {isSaving ? (
+                                                        <div style={{ width: 20, height: 20, border: '3px solid rgba(255,255,255,0.3)', borderTopColor: '#fff', borderRadius: '50%', animation: 'spin 1s linear infinite' }} />
+                                                    ) : saveSuccess ? (
+                                                        <><Check size={20} strokeWidth={4} /> ENREGISTRÉ !</>
+                                                    ) : (
+                                                        <><CheckCircle2 size={20} /> ENREGISTRER MES CHOIX</>
+                                                    )}
+                                                </button>
+                                                <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+                                            </motion.div>
+                                        )}
+                                    </AnimatePresence>
+
                                     {!user && (
                                         <div style={{ maxWidth: 600, margin: '4rem auto', padding: '0 1.25rem', textAlign: 'center' }}>
                                             <h3 style={{ fontSize: '1.5rem', fontWeight: 950, marginBottom: '1rem' }}>Tu joues souvent ?</h3>
                                             <button onClick={() => router.push('/login')} style={{ background: 'rgba(0,0,0,0.05)', color: 'var(--pitch-black)', border: 'none', padding: '1rem 2rem', borderRadius: '1.25rem', fontWeight: 950, cursor: 'pointer' }}>CRÉER UN COMPTE</button>
                                         </div>
                                     )}
+
+                                    {/* Modal Saisie Nom pour Invités */}
+                                    <AnimatePresence>
+                                        {showGuestNameModal && (
+                                            <div style={{ position: 'fixed', inset: 0, zIndex: 1100, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem' }}>
+                                                <motion.div
+                                                    initial={{ opacity: 0 }}
+                                                    animate={{ opacity: 1 }}
+                                                    exit={{ opacity: 0 }}
+                                                    style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.85)', backdropFilter: 'blur(8px)' }}
+                                                />
+                                                <motion.div
+                                                    initial={{ scale: 0.9, opacity: 0 }}
+                                                    animate={{ scale: 1, opacity: 1 }}
+                                                    exit={{ scale: 0.9, opacity: 0 }}
+                                                    style={{
+                                                        position: 'relative',
+                                                        background: '#fff',
+                                                        borderRadius: '2rem',
+                                                        padding: '3rem',
+                                                        maxWidth: '400px',
+                                                        width: '100%',
+                                                        textAlign: 'center'
+                                                    }}
+                                                >
+                                                    <div style={{ width: 64, height: 64, background: 'var(--off-white-clay)', borderRadius: '1.5rem', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 1.5rem', color: 'var(--sun-blaze)' }}>
+                                                        <UserIcon size={32} />
+                                                    </div>
+                                                    <h3 style={{ fontSize: '1.75rem', fontWeight: 950, marginBottom: '0.5rem', letterSpacing: '-0.02em' }}>C'est qui ?</h3>
+                                                    <p style={{ color: '#666', marginBottom: '2rem', fontWeight: 600 }}>Saisis ton prénom pour voter</p>
+
+                                                    <input
+                                                        type="text"
+                                                        value={voterName}
+                                                        onChange={(e) => setVoterName(e.target.value)}
+                                                        placeholder="Ton prénom..."
+                                                        autoFocus
+                                                        style={{
+                                                            width: '100%',
+                                                            padding: '1.25rem',
+                                                            borderRadius: '1.25rem',
+                                                            border: '2px solid #eee',
+                                                            fontSize: '1.1rem',
+                                                            fontWeight: 700,
+                                                            marginBottom: '1.5rem',
+                                                            textAlign: 'center',
+                                                            outline: 'none'
+                                                        }}
+                                                    />
+
+                                                    <button
+                                                        onClick={() => {
+                                                            if (voterName.trim()) setShowGuestNameModal(false);
+                                                        }}
+                                                        disabled={!voterName.trim()}
+                                                        style={{
+                                                            width: '100%',
+                                                            padding: '1.25rem',
+                                                            borderRadius: '1.25rem',
+                                                            background: voterName.trim() ? '#1A1A1A' : '#eee',
+                                                            color: voterName.trim() ? '#fff' : '#aaa',
+                                                            border: 'none',
+                                                            fontWeight: 950,
+                                                            fontSize: '1rem',
+                                                            cursor: voterName.trim() ? 'pointer' : 'default',
+                                                            transition: 'all 0.2s'
+                                                        }}
+                                                    >
+                                                        C'EST PARTI !
+                                                    </button>
+                                                </motion.div>
+                                            </div>
+                                        )}
+                                    </AnimatePresence>
                                 </>
                             );
                         })()}
